@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace Downroot.Core.Diagnostics;
 
@@ -36,25 +37,26 @@ public static class RuntimeProfiler
     private static readonly object Sync = new();
     private static readonly Dictionary<string, SectionAggregate> SectionAggregates = [];
     private static readonly Dictionary<string, CounterAggregate> CounterAggregates = [];
-    private static Action<string> _logger = Console.WriteLine;
-    private static int _frameWindow = 60;
+    private static string? _logFilePath;
+    private static TimeSpan _flushInterval = TimeSpan.FromSeconds(5);
     private static int _frameCount;
     private static long _frameTotalTicks;
     private static long _frameMaxTicks;
     private static long _frameStartTimestamp;
+    private static long _windowStartTimestamp;
 
     public static bool Enabled { get; set; } = false;
 
-    public static void Configure(Action<string>? logger = null, int frameWindow = 60)
+    public static void Configure(string? logFilePath = null, TimeSpan? flushInterval = null)
     {
         lock (Sync)
         {
-            if (logger is not null)
+            _logFilePath = string.IsNullOrWhiteSpace(logFilePath) ? null : logFilePath;
+            _flushInterval = flushInterval.GetValueOrDefault(TimeSpan.FromSeconds(5));
+            if (_flushInterval <= TimeSpan.Zero)
             {
-                _logger = logger;
+                _flushInterval = TimeSpan.FromSeconds(5);
             }
-
-            _frameWindow = Math.Max(1, frameWindow);
         }
     }
 
@@ -89,7 +91,16 @@ public static class RuntimeProfiler
             return;
         }
 
-        _frameStartTimestamp = Stopwatch.GetTimestamp();
+        var timestamp = Stopwatch.GetTimestamp();
+        lock (Sync)
+        {
+            if (_windowStartTimestamp == 0)
+            {
+                _windowStartTimestamp = timestamp;
+            }
+
+            _frameStartTimestamp = timestamp;
+        }
     }
 
     public static void EndFrame()
@@ -105,7 +116,26 @@ public static class RuntimeProfiler
             _frameCount++;
             _frameTotalTicks += elapsedTicks;
             _frameMaxTicks = Math.Max(_frameMaxTicks, elapsedTicks);
-            if (_frameCount < _frameWindow)
+            var windowElapsed = Stopwatch.GetElapsedTime(_windowStartTimestamp, Stopwatch.GetTimestamp());
+            if (windowElapsed < _flushInterval)
+            {
+                return;
+            }
+
+            Flush();
+        }
+    }
+
+    public static void FlushNow()
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        lock (Sync)
+        {
+            if (_frameCount <= 0 && SectionAggregates.Count == 0 && CounterAggregates.Count == 0)
             {
                 return;
             }
@@ -137,28 +167,72 @@ public static class RuntimeProfiler
 
     private static void Flush()
     {
-        var frameAverageMs = ToMilliseconds(_frameTotalTicks / Math.Max(1, _frameCount));
+        var now = DateTimeOffset.UtcNow;
+        var frameAverageMs = _frameCount > 0 ? ToMilliseconds(_frameTotalTicks / Math.Max(1, _frameCount)) : 0d;
         var frameMaxMs = ToMilliseconds(_frameMaxTicks);
-        _logger($"[Profiler] Frames={_frameCount} frame_avg={frameAverageMs:F2}ms frame_max={frameMaxMs:F2}ms");
+        var payload = new ProfilerSnapshot(
+            now,
+            _frameCount,
+            frameAverageMs,
+            frameMaxMs,
+            SectionAggregates
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair =>
+                    {
+                        var averageTicks = pair.Value.TotalTicks / Math.Max(1, pair.Value.Samples);
+                        return new SectionSnapshot(
+                            ToMilliseconds(averageTicks),
+                            ToMilliseconds(pair.Value.MaxTicks),
+                            pair.Value.Samples);
+                    },
+                    StringComparer.Ordinal),
+            CounterAggregates
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value.Total,
+                    StringComparer.Ordinal));
 
-        foreach (var pair in SectionAggregates.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-        {
-            var averageTicks = pair.Value.TotalTicks / Math.Max(1, pair.Value.Samples);
-            _logger(
-                $"[Profiler] {pair.Key} avg={ToMilliseconds(averageTicks):F2}ms max={ToMilliseconds(pair.Value.MaxTicks):F2}ms samples={pair.Value.Samples}");
-        }
-
-        foreach (var pair in CounterAggregates.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-        {
-            _logger($"[Profiler] {pair.Key} count={pair.Value.Total}");
-        }
+        AppendSnapshot(payload);
 
         _frameCount = 0;
         _frameTotalTicks = 0;
         _frameMaxTicks = 0;
+        _windowStartTimestamp = Stopwatch.GetTimestamp();
         SectionAggregates.Clear();
         CounterAggregates.Clear();
     }
 
+    private static void AppendSnapshot(ProfilerSnapshot payload)
+    {
+        if (string.IsNullOrWhiteSpace(_logFilePath))
+        {
+            return;
+        }
+
+        var directory = Path.GetDirectoryName(_logFilePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.AppendAllText(_logFilePath, JsonSerializer.Serialize(payload) + Environment.NewLine);
+    }
+
     private static double ToMilliseconds(long ticks) => ticks * 1000d / Stopwatch.Frequency;
+
+    private sealed record ProfilerSnapshot(
+        DateTimeOffset TimestampUtc,
+        int Frames,
+        double FrameAverageMs,
+        double FrameMaxMs,
+        IReadOnlyDictionary<string, SectionSnapshot> Sections,
+        IReadOnlyDictionary<string, long> Counters);
+
+    private sealed record SectionSnapshot(
+        double AverageMs,
+        double MaxMs,
+        int Samples);
 }
