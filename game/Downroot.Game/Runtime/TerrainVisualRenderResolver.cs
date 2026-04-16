@@ -6,14 +6,19 @@ namespace Downroot.Game.Runtime;
 
 public static class TerrainVisualRenderResolver
 {
-    private static readonly ContentId DirtTerrainId = new("basegame:dirt");
     private static readonly ContentId MountainTerrainId = new("basegame:mountain");
     private static readonly ContentId RiverWaterTerrainId = new("basegame:river_water");
     private static readonly Color DefaultTint = Colors.White;
     private static readonly Color RaisedMountainTint = new(0.78f, 0.80f, 0.84f, 1f);
     private static readonly Color CliffMountainTint = new(0.58f, 0.62f, 0.68f, 1f);
 
-    public static IReadOnlyList<DualGridLayerDef> DualGridLayers => DualGridLayerCatalog.All;
+    public static IReadOnlyList<DualGridLayerDef> BaseDualGridLayers => [DualGridLayerCatalog.Dirt];
+
+    public static IReadOnlyList<DualGridLayerDef> OverlayDualGridLayers => [
+        DualGridLayerCatalog.DeepWater,
+        DualGridLayerCatalog.Beach,
+        DualGridLayerCatalog.Grass
+    ];
 
     public static TerrainVisualRenderProfile Resolve(
         WorldSpaceKind worldSpaceKind,
@@ -26,17 +31,18 @@ public static class TerrainVisualRenderResolver
             return new TerrainVisualRenderProfile(
                 fallbackBaseTerrainId,
                 legacyCoverTerrainId is not null,
-                DefaultTint);
+                DefaultTint,
+                null);
         }
 
         return semantic.Visual switch
         {
-            TerrainVisualKind.DeepWater => new TerrainVisualRenderProfile(RiverWaterTerrainId, false, DefaultTint),
-            TerrainVisualKind.ShallowWater => new TerrainVisualRenderProfile(RiverWaterTerrainId, false, DefaultTint),
-            TerrainVisualKind.Beach => new TerrainVisualRenderProfile(DirtTerrainId, false, DefaultTint),
-            TerrainVisualKind.Grass => new TerrainVisualRenderProfile(DirtTerrainId, false, DefaultTint),
-            TerrainVisualKind.Mountain => new TerrainVisualRenderProfile(MountainTerrainId, false, ResolveMountainTint(semantic.Height)),
-            _ => new TerrainVisualRenderProfile(DirtTerrainId, false, DefaultTint)
+            TerrainVisualKind.DeepWater => new TerrainVisualRenderProfile(RiverWaterTerrainId, false, DefaultTint, null),
+            TerrainVisualKind.ShallowWater => new TerrainVisualRenderProfile(RiverWaterTerrainId, false, DefaultTint, null),
+            TerrainVisualKind.Beach => new TerrainVisualRenderProfile(null, false, DefaultTint, TerrainVisualKind.Dirt),
+            TerrainVisualKind.Grass => new TerrainVisualRenderProfile(null, false, DefaultTint, TerrainVisualKind.Dirt),
+            TerrainVisualKind.Mountain => new TerrainVisualRenderProfile(MountainTerrainId, false, ResolveMountainTint(semantic.Height), null),
+            _ => new TerrainVisualRenderProfile(null, false, DefaultTint, TerrainVisualKind.Dirt)
         };
     }
 
@@ -52,6 +58,7 @@ public static class TerrainVisualRenderResolver
 }
 
 public sealed record TerrainVisualRenderProfile(
-    ContentId BaseTerrainId,
+    ContentId? BaseTerrainId,
     bool RenderLegacyCover,
-    Color BaseTint);
+    Color BaseTint,
+    TerrainVisualKind? BaseDualGridVisualKind);
