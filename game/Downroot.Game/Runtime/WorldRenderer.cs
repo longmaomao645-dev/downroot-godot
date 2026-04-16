@@ -226,6 +226,7 @@ public sealed partial class WorldRenderer : Node2D
     {
         using var scope = RuntimeProfiler.Measure("WorldRenderer.SynchronizeChunks");
         var world = _worldFacade!.GetActiveWorld();
+        var centerChunk = _worldFacade.GetChunkCoord(_runtime!.Player.Position);
         var desiredChunks = world.LoadedChunks.Keys.ToHashSet();
         foreach (var staleChunk in _chunkVisuals.Keys.Where(coord => !desiredChunks.Contains(coord)).ToArray())
         {
@@ -238,7 +239,10 @@ public sealed partial class WorldRenderer : Node2D
             _chunkVisuals.Remove(staleChunk);
         }
 
-        foreach (var pair in world.LoadedChunks.OrderBy(pair => pair.Key.Y).ThenBy(pair => pair.Key.X))
+        foreach (var pair in world.LoadedChunks
+                     .OrderBy(pair => GetChunkPriority(pair.Key, centerChunk))
+                     .ThenBy(pair => pair.Key.Y)
+                     .ThenBy(pair => pair.Key.X))
         {
             if (_chunkVisuals.ContainsKey(pair.Key))
             {
@@ -422,13 +426,14 @@ public sealed partial class WorldRenderer : Node2D
             return;
         }
 
-        foreach (var pair in _pendingChunkTerrainBuilds.ToArray())
+        var centerChunk = _worldFacade!.GetChunkCoord(_runtime!.Player.Position);
+        foreach (var pair in _pendingChunkTerrainBuilds
+                     .Where(pair => pair.Value.Task.IsCompleted)
+                     .OrderBy(pair => GetChunkPriority(pair.Key, centerChunk))
+                     .ThenBy(pair => pair.Key.Y)
+                     .ThenBy(pair => pair.Key.X)
+                     .ToArray())
         {
-            if (!pair.Value.Task.IsCompleted)
-            {
-                continue;
-            }
-
             _pendingChunkTerrainBuilds.Remove(pair.Key);
             if (!_chunkVisuals.TryGetValue(pair.Key, out var visual) || visual.TerrainBuildRequestId != pair.Value.RequestId)
             {
@@ -1319,6 +1324,13 @@ public sealed partial class WorldRenderer : Node2D
     private static int ToTileIndex(int x, int y, int width) => (y * width) + x;
 
     private static int ToCornerIndex(int x, int y, int width) => (y * width) + x;
+
+    private static int GetChunkPriority(ChunkCoord coord, ChunkCoord center)
+    {
+        var dx = Math.Abs(coord.X - center.X);
+        var dy = Math.Abs(coord.Y - center.Y);
+        return Math.Max(dx, dy);
+    }
 
     private static Vector2 ToGodot(NumericsVector2 vector) => new(vector.X, vector.Y);
 

@@ -11,6 +11,7 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
 
     private readonly Dictionary<PendingChunkLoadKey, PendingChunkLoad> _pendingChunkLoads = [];
     private readonly Dictionary<WorldSpaceKind, HashSet<ChunkCoord>> _desiredChunksByWorld = [];
+    private readonly Dictionary<WorldSpaceKind, ChunkCoord> _desiredCentersByWorld = [];
     private long _nextChunkLoadRequestId;
 
     public bool UpdateLoadedChunks()
@@ -79,9 +80,10 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
         }
 
         _desiredChunksByWorld[world.WorldSpaceKind] = desired;
+        _desiredCentersByWorld[world.WorldSpaceKind] = centerChunk;
         var changed = ProcessCompletedChunkLoads();
 
-        foreach (var coord in desired)
+        foreach (var coord in desired.OrderBy(coord => GetChunkPriority(coord, centerChunk)).ThenBy(coord => coord.Y).ThenBy(coord => coord.X))
         {
             if (world.LoadedChunks.ContainsKey(coord))
             {
@@ -141,16 +143,18 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
     {
         var changed = false;
         var committed = 0;
-        foreach (var pair in _pendingChunkLoads.ToArray())
+        var orderedCompletedLoads = _pendingChunkLoads
+            .Where(pair => pair.Value.Task.IsCompleted)
+            .OrderBy(pair => GetPendingChunkPriority(pair.Key))
+            .ThenBy(pair => pair.Key.Coord.Y)
+            .ThenBy(pair => pair.Key.Coord.X)
+            .ToArray();
+
+        foreach (var pair in orderedCompletedLoads)
         {
             if (committed >= ChunkLoadCommitBudgetPerTick)
             {
                 break;
-            }
-
-            if (!pair.Value.Task.IsCompleted)
-            {
-                continue;
             }
 
             _pendingChunkLoads.Remove(pair.Key);
@@ -181,6 +185,20 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
         }
 
         return changed;
+    }
+
+    private int GetPendingChunkPriority(PendingChunkLoadKey key)
+    {
+        return _desiredCentersByWorld.TryGetValue(key.WorldSpaceKind, out var center)
+            ? GetChunkPriority(key.Coord, center)
+            : int.MaxValue;
+    }
+
+    private static int GetChunkPriority(ChunkCoord coord, ChunkCoord center)
+    {
+        var dx = Math.Abs(coord.X - center.X);
+        var dy = Math.Abs(coord.Y - center.Y);
+        return Math.Max(dx, dy);
     }
 
     private readonly record struct PendingChunkLoadKey(
