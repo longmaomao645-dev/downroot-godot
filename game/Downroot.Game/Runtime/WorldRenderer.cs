@@ -20,6 +20,9 @@ public sealed partial class WorldRenderer : Node2D
     private const int EntityBandLayerZ = 768;
     private const int ChunkBoundsLayerZ = 1536;
     private const int MaxEntitySortSpan = 1023;
+    private const string GrassTerrainId = "basegame:grass";
+    private const string GrassDualGridTexturePath = "packs/basegame/assets/world/terrain/ground/grass_dualgrid.png";
+    private const string GrassDualGridTextureId = "basegame:grass_dualgrid";
 
     private readonly TextureContentLoader _textureLoader;
     private readonly PlayerAnimationFactory _animationFactory;
@@ -33,6 +36,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private GameRuntime? _runtime;
     private WorldRuntimeFacade? _worldFacade;
+    private CoverDualGridSampler? _coverDualGridSampler;
     private Node2D? _terrainLayer;
     private Node2D? _entityLayer;
     private CharacterBody2D? _playerBody;
@@ -55,6 +59,7 @@ public sealed partial class WorldRenderer : Node2D
     {
         _runtime = runtime;
         _worldFacade = new WorldRuntimeFacade(runtime);
+        _coverDualGridSampler = new CoverDualGridSampler(_worldFacade, runtime);
         _terrainLayer = new Node2D { Name = "TerrainLayer", ZIndex = TerrainLayerZ };
         _entityLayer = new Node2D { Name = "EntityLayer" };
         AddChild(_terrainLayer);
@@ -130,6 +135,11 @@ public sealed partial class WorldRenderer : Node2D
         foreach (var terrain in runtime.Content.Terrains.All)
         {
             _ = ResolveTerrainTexture(terrain, terrain.AtlasColumn, terrain.AtlasRow);
+        }
+
+        for (var variantIndex = CoverDualGridResolver.Empty; variantIndex <= CoverDualGridResolver.Full; variantIndex++)
+        {
+            _ = ResolveGrassDualGridTexture(variantIndex);
         }
 
         foreach (var item in runtime.Content.Items.All)
@@ -283,11 +293,18 @@ public sealed partial class WorldRenderer : Node2D
                 }
 
                 var coverTerrainDef = _runtime.Content.Terrains.Get(coverTerrainId.Value);
+                if (coverTerrainDef.Id.Value == GrassTerrainId)
+                {
+                    continue;
+                }
+
                 var coverSprite = CreateTerrainSprite($"CoverTerrain_{x}_{y}", worldTile, coverTerrainDef, 1);
                 visual.TerrainRoot.AddChild(coverSprite);
                 visual.CoverTerrainSprites[worldTile] = coverSprite;
             }
         }
+
+        BuildChunkGrassDualGridCover(chunk, visual);
     }
 
     private Sprite2D CreateTerrainSprite(string name, WorldTileCoord worldTile, TerrainDef terrainDef, int zIndex)
@@ -301,6 +318,47 @@ public sealed partial class WorldRenderer : Node2D
             Position = new Vector2(worldTile.X * TileSize, worldTile.Y * TileSize),
             Modulate = ResolveTileBrightnessColor(worldTile),
             ZIndex = zIndex
+        };
+    }
+
+    private void BuildChunkGrassDualGridCover(Downroot.World.Models.GeneratedChunk chunk, ChunkVisualState visual)
+    {
+        var grassId = new ContentId(GrassTerrainId);
+        var chunkOriginTile = WorldTileCoord.FromChunkAndLocal(chunk.Coord, new LocalTileCoord(0, 0), _runtime!.ChunkWidth, _runtime.ChunkHeight);
+        for (var y = 0; y < chunk.Surface.Height; y++)
+        {
+            for (var x = 0; x < chunk.Surface.Width; x++)
+            {
+                var displayTile = new WorldTileCoord(chunkOriginTile.X + x, chunkOriginTile.Y + y);
+                var topLeft = _coverDualGridSampler!.HasCover(new WorldTileCoord(displayTile.X - 1, displayTile.Y - 1), grassId);
+                var topRight = _coverDualGridSampler.HasCover(new WorldTileCoord(displayTile.X, displayTile.Y - 1), grassId);
+                var bottomLeft = _coverDualGridSampler.HasCover(new WorldTileCoord(displayTile.X - 1, displayTile.Y), grassId);
+                var bottomRight = _coverDualGridSampler.HasCover(displayTile, grassId);
+                var variantIndex = CoverDualGridResolver.ResolveVariantIndex(topLeft, topRight, bottomLeft, bottomRight);
+                if (variantIndex == CoverDualGridResolver.Empty)
+                {
+                    continue;
+                }
+
+                var sprite = CreateGrassTransitionSprite(displayTile, variantIndex);
+                visual.TerrainRoot.AddChild(sprite);
+                visual.CoverTerrainSprites[displayTile] = sprite;
+            }
+        }
+    }
+
+    private Sprite2D CreateGrassTransitionSprite(WorldTileCoord displayTile, int variantIndex)
+    {
+        return new Sprite2D
+        {
+            Name = $"GrassDualGrid_{displayTile.X}_{displayTile.Y}",
+            Centered = false,
+            Texture = ResolveGrassDualGridTexture(variantIndex),
+            Position = new Vector2(
+                (displayTile.X * TileSize) - (TileSize * 0.5f),
+                (displayTile.Y * TileSize) - (TileSize * 0.5f)),
+            Modulate = ResolveTileBrightnessColor(displayTile),
+            ZIndex = 1
         };
     }
 
@@ -553,6 +611,46 @@ public sealed partial class WorldRenderer : Node2D
         return ResolveCachedTexture(
             $"terrain:{terrainDef.Id.Value}:{atlasColumn}:{atlasRow}",
             () => _textureLoader.LoadTerrain(terrainDef, atlasColumn, atlasRow).Texture);
+    }
+
+    private Texture2D ResolveGrassDualGridTexture(int variantIndex)
+    {
+        return ResolveCachedTexture(
+            $"grass-dualgrid:{variantIndex}",
+            () =>
+            {
+                var texture = _textureLoader.LoadTexture(GrassDualGridTextureId, GrassDualGridTexturePath);
+                var (atlasColumn, atlasRow) = ResolveGrassDualGridAtlasCoords(variantIndex);
+                return new AtlasTexture
+                {
+                    Atlas = texture.Texture,
+                    Region = new Rect2(atlasColumn * TileSize, atlasRow * TileSize, TileSize, TileSize)
+                };
+            });
+    }
+
+    private static (int AtlasColumn, int AtlasRow) ResolveGrassDualGridAtlasCoords(int variantIndex)
+    {
+        return variantIndex switch
+        {
+            CoverDualGridResolver.Empty => (0, 3),
+            CoverDualGridResolver.OuterTopLeft => (3, 3),
+            CoverDualGridResolver.OuterTopRight => (0, 2),
+            CoverDualGridResolver.OuterBottomLeft => (0, 0),
+            CoverDualGridResolver.OuterBottomRight => (1, 3),
+            CoverDualGridResolver.EdgeTop => (1, 2),
+            CoverDualGridResolver.EdgeRight => (1, 0),
+            CoverDualGridResolver.EdgeBottom => (3, 0),
+            CoverDualGridResolver.EdgeLeft => (3, 2),
+            CoverDualGridResolver.InnerTopLeft => (3, 1),
+            CoverDualGridResolver.InnerTopRight => (2, 2),
+            CoverDualGridResolver.InnerBottomLeft => (2, 0),
+            CoverDualGridResolver.InnerBottomRight => (1, 1),
+            CoverDualGridResolver.DiagonalA => (0, 1),
+            CoverDualGridResolver.DiagonalB => (2, 3),
+            CoverDualGridResolver.Full => (2, 1),
+            _ => throw new ArgumentOutOfRangeException(nameof(variantIndex), $"Unsupported grass dual-grid variant '{variantIndex}'.")
+        };
     }
 
     private Texture2D ResolveItemTexture(ItemDef itemDef) => ResolveCachedTexture($"item:{itemDef.Id.Value}", () => _textureLoader.LoadItem(itemDef).Texture);
