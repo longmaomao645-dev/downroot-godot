@@ -20,9 +20,6 @@ public sealed partial class WorldRenderer : Node2D
     private const int EntityBandLayerZ = 768;
     private const int ChunkBoundsLayerZ = 1536;
     private const int MaxEntitySortSpan = 1023;
-    private static readonly ContentId DirtTerrainId = new("basegame:dirt");
-    private static readonly ContentId MountainTerrainId = new("basegame:mountain");
-    private static readonly ContentId RiverWaterTerrainId = new("basegame:river_water");
 
     private readonly TextureContentLoader _textureLoader;
     private readonly PlayerAnimationFactory _animationFactory;
@@ -289,14 +286,20 @@ public sealed partial class WorldRenderer : Node2D
             for (var x = 0; x < chunk.Surface.Width; x++)
             {
                 var worldTile = new WorldTileCoord(chunkOriginTile.X + x, chunkOriginTile.Y + y);
-                var baseTerrainId = ResolveBaseTerrainId(chunk, x, y);
-                var baseTerrainDef = _runtime.Content.Terrains.Get(baseTerrainId);
-                var baseSprite = CreateTerrainSprite($"BaseTerrain_{x}_{y}", worldTile, baseTerrainDef, 0);
+                var semantic = chunk.Surface.GetSurfaceSemantic(x, y);
+                var renderProfile = TerrainVisualRenderResolver.Resolve(
+                    chunk.WorldSpaceKind,
+                    semantic,
+                    chunk.Surface.GetBaseTerrainId(x, y) ?? _runtime.BootstrapConfig.DefaultTerrainId,
+                    chunk.Surface.GetCoverTerrainId(x, y));
+                var baseTerrainDef = _runtime.Content.Terrains.Get(renderProfile.BaseTerrainId);
+                var baseSprite = CreateTerrainSprite($"BaseTerrain_{x}_{y}", worldTile, baseTerrainDef, 0, renderProfile.BaseTint);
                 visual.TerrainRoot.AddChild(baseSprite);
                 visual.BaseTerrainSprites[worldTile] = baseSprite;
+                visual.BaseTerrainTints[worldTile] = renderProfile.BaseTint;
 
                 var coverTerrainId = chunk.Surface.GetCoverTerrainId(x, y);
-                if (coverTerrainId is null || !ShouldRenderLegacyCoverTerrain(chunk, x, y))
+                if (coverTerrainId is null || !renderProfile.RenderLegacyCover)
                 {
                     continue;
                 }
@@ -309,38 +312,7 @@ public sealed partial class WorldRenderer : Node2D
         }
     }
 
-    private ContentId ResolveBaseTerrainId(Downroot.World.Models.GeneratedChunk chunk, int x, int y)
-    {
-        if (chunk.WorldSpaceKind != WorldSpaceKind.Overworld)
-        {
-            return chunk.Surface.GetBaseTerrainId(x, y) ?? _runtime!.BootstrapConfig.DefaultTerrainId;
-        }
-
-        var visualKind = chunk.Surface.GetVisualKind(x, y);
-        return visualKind switch
-        {
-            TerrainVisualKind.ShallowWater => RiverWaterTerrainId,
-            TerrainVisualKind.DeepWater => RiverWaterTerrainId,
-            TerrainVisualKind.Mountain => MountainTerrainId,
-            _ => DirtTerrainId
-        };
-    }
-
-    private static bool ShouldRenderLegacyCoverTerrain(Downroot.World.Models.GeneratedChunk chunk, int x, int y)
-    {
-        if (chunk.WorldSpaceKind == WorldSpaceKind.Overworld)
-        {
-            var visualKind = chunk.Surface.GetVisualKind(x, y);
-            return visualKind is not TerrainVisualKind.Grass
-                and not TerrainVisualKind.Beach
-                and not TerrainVisualKind.DeepWater
-                and not TerrainVisualKind.ShallowWater;
-        }
-
-        return true;
-    }
-
-    private Sprite2D CreateTerrainSprite(string name, WorldTileCoord worldTile, TerrainDef terrainDef, int zIndex)
+    private Sprite2D CreateTerrainSprite(string name, WorldTileCoord worldTile, TerrainDef terrainDef, int zIndex, Color? baseTint = null)
     {
         var (atlasColumn, atlasRow) = ResolveTerrainVariant(terrainDef, worldTile);
         return new Sprite2D
@@ -349,16 +321,24 @@ public sealed partial class WorldRenderer : Node2D
             Centered = false,
             Texture = ResolveTerrainTexture(terrainDef, atlasColumn, atlasRow),
             Position = new Vector2(worldTile.X * TileSize, worldTile.Y * TileSize),
-            Modulate = ResolveTileBrightnessColor(worldTile),
+            Modulate = ResolveTileBrightnessColor(worldTile, baseTint ?? Colors.White),
             ZIndex = zIndex
         };
     }
 
     private void BuildChunkDualGridTerrainLayers(Downroot.World.Models.GeneratedChunk chunk, ChunkVisualState visual)
     {
-        BuildChunkDualGridLayer(chunk, visual, DualGridLayerCatalog.DeepWater, visual.DeepWaterSprites);
-        BuildChunkDualGridLayer(chunk, visual, DualGridLayerCatalog.Beach, visual.BeachSprites);
-        BuildChunkDualGridLayer(chunk, visual, DualGridLayerCatalog.Grass, visual.GrassSprites);
+        foreach (var layerDef in TerrainVisualRenderResolver.DualGridLayers)
+        {
+            var spriteBucket = layerDef.VisualKind switch
+            {
+                TerrainVisualKind.DeepWater => visual.DeepWaterSprites,
+                TerrainVisualKind.Beach => visual.BeachSprites,
+                TerrainVisualKind.Grass => visual.GrassSprites,
+                _ => throw new ArgumentOutOfRangeException(nameof(layerDef), $"Unsupported dual-grid layer '{layerDef.VisualKind}'.")
+            };
+            BuildChunkDualGridLayer(chunk, visual, layerDef, spriteBucket);
+        }
     }
 
     private void BuildChunkDualGridLayer(
@@ -864,7 +844,7 @@ public sealed partial class WorldRenderer : Node2D
         {
             foreach (var pair in visual.BaseTerrainSprites)
             {
-                pair.Value.Modulate = ResolveTileBrightnessColor(pair.Key);
+                pair.Value.Modulate = ResolveTileBrightnessColor(pair.Key, visual.BaseTerrainTints[pair.Key]);
             }
 
             foreach (var pair in visual.CoverTerrainSprites)
@@ -894,9 +874,9 @@ public sealed partial class WorldRenderer : Node2D
         }
     }
 
-    private Color ResolveTileBrightnessColor(WorldTileCoord tile)
+    private Color ResolveTileBrightnessColor(WorldTileCoord tile, Color? baseColor = null)
     {
-        return ApplyBrightness(Colors.White, SampleBrightness(tile));
+        return ApplyBrightness(baseColor ?? Colors.White, SampleBrightness(tile));
     }
 
     private float ResolveEntityBrightness(WorldEntityState entity)
@@ -1129,6 +1109,7 @@ public sealed partial class WorldRenderer : Node2D
         Node2D EntityRoot,
         Node2D BoundsRoot,
         Dictionary<WorldTileCoord, Sprite2D> BaseTerrainSprites,
+        Dictionary<WorldTileCoord, Color> BaseTerrainTints,
         Dictionary<WorldTileCoord, Sprite2D> CoverTerrainSprites,
         Dictionary<WorldTileCoord, Sprite2D> DeepWaterSprites,
         Dictionary<WorldTileCoord, Sprite2D> BeachSprites,
@@ -1136,7 +1117,7 @@ public sealed partial class WorldRenderer : Node2D
         Dictionary<WorldTileCoord, Sprite2D> RaisedSprites)
     {
         public ChunkVisualState(Node2D terrainRoot, Node2D raisedFeatureRoot, Node2D entityRoot, Node2D boundsRoot)
-            : this(terrainRoot, raisedFeatureRoot, entityRoot, boundsRoot, [], [], [], [], [], [])
+            : this(terrainRoot, raisedFeatureRoot, entityRoot, boundsRoot, [], [], [], [], [], [], [])
         {
         }
     }
