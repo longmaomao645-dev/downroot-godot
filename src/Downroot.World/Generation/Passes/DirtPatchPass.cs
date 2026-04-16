@@ -23,7 +23,6 @@ public sealed class DirtPatchPass(ContentId terrainId) : IWorldGenPass
                     var coord = new LocalTileCoord(x, y);
                     context.SetBaseTerrain(coord, terrainId);
                     context.SetCoverTerrain(coord, null);
-                    context.SetSurfaceRegion(coord, SurfaceRegions.DirtField);
                 }
             }
         }

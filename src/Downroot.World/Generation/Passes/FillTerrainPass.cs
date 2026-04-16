@@ -21,8 +21,10 @@ public sealed class FillTerrainPass(ContentId terrainId, string surfaceRegion) :
                 var coord = new LocalTileCoord(x, y);
                 context.SetBaseTerrain(coord, terrainId);
                 context.SetCoverTerrain(coord, null);
+
+                // Some world spaces still rely on fill-time regions and do not run TerrainSemanticPass.
+                // Overworld semantics are finalized later by TerrainSemanticPass, which overwrites this.
                 context.SetSurfaceRegion(coord, surfaceRegion);
-                context.SetSurfaceSemantic(coord, SurfaceSemanticDefaults.CreateForRegion(context.WorldSpaceKind, surfaceRegion));
             }
         }
     }

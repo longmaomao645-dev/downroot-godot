@@ -28,17 +28,10 @@ public sealed class GrassRegionPass(ContentId terrainId) : IWorldGenPass
                 if (value >= GrassThreshold)
                 {
                     context.SetCoverTerrain(coord, terrainId);
-                    context.SetSurfaceRegion(coord, SurfaceRegions.GrassField);
-                    context.SetSurfaceSemantic(coord, SurfaceSemanticDefaults.CreateForRegion(context.WorldSpaceKind, SurfaceRegions.GrassField));
                 }
                 else
                 {
                     context.SetCoverTerrain(coord, null);
-                    if (context.GetBaseTerrain(coord) is not null)
-                    {
-                        context.SetSurfaceRegion(coord, SurfaceRegions.DirtField);
-                        context.SetSurfaceSemantic(coord, SurfaceSemanticDefaults.CreateForRegion(context.WorldSpaceKind, SurfaceRegions.DirtField));
-                    }
                 }
             }
         }

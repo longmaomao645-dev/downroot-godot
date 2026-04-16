@@ -8,6 +8,8 @@ public sealed class TerrainSemanticPass : IWorldGenPass
 
     public void Execute(IWorldGenContext context)
     {
+        // TerrainSemanticPass is the final writer for overworld SurfaceSemantic and SurfaceRegion.
+        // Earlier terrain passes may shape legacy base/cover compatibility data, but do not own final semantics.
         for (var y = 0; y < context.Height; y++)
         {
             for (var x = 0; x < context.Width; x++)
