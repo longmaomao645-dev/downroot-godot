@@ -5,6 +5,7 @@ using Downroot.Core.World;
 using Downroot.Core.Diagnostics;
 using Downroot.Game.Infrastructure;
 using Downroot.Gameplay.Runtime;
+using Downroot.World.Generation;
 using Godot;
 using NumericsVector2 = System.Numerics.Vector2;
 
@@ -810,6 +811,13 @@ public sealed partial class WorldRenderer : Node2D
 
     private (int AtlasColumn, int AtlasRow) ResolveTerrainVariant(TerrainDef terrainDef, WorldTileCoord tile)
     {
+        if (terrainDef.Id.Value == "basegame:dirt")
+        {
+            var activeWorld = _worldFacade!.GetActiveWorld();
+            var dirtVariantIndex = DirtVariantSampler.SampleVariantIndex(activeWorld.WorldSpaceKind, activeWorld.WorldSeed, tile);
+            return ResolveDirtAtlasCoords(terrainDef, dirtVariantIndex);
+        }
+
         if (terrainDef.VariantColumnCount <= 1 && terrainDef.VariantRowCount <= 1)
         {
             return (terrainDef.AtlasColumn, terrainDef.AtlasRow);
@@ -820,6 +828,11 @@ public sealed partial class WorldRenderer : Node2D
         return (
             terrainDef.AtlasColumn + (variantIndex % terrainDef.VariantColumnCount),
             terrainDef.AtlasRow + (variantIndex / terrainDef.VariantColumnCount));
+    }
+
+    private static (int AtlasColumn, int AtlasRow) ResolveDirtAtlasCoords(TerrainDef terrainDef, int variantIndex)
+    {
+        return (terrainDef.AtlasColumn + variantIndex, terrainDef.AtlasRow);
     }
 
     private static int GetDeterministicTerrainVariantIndex(string terrainId, WorldTileCoord tile, int worldSeed, int variantCount)

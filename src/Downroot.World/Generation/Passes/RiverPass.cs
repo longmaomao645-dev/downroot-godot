@@ -32,15 +32,42 @@ public sealed class RiverPass(ContentId riverTerrainId) : IWorldGenPass
     }
 
     public static bool IsRiverTile(IWorldGenContext context, WorldTileCoord world)
+        => IsRiverTile(context.WorldSpaceKind, context.WorldSeed, world);
+
+    public static bool IsRiverTile(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord world)
     {
-        var primaryCenter = (MathF.Sin((world.X * 0.085f) + (context.WorldSeed * 0.013f)) * 4.25f)
-            + (context.GetStableUnitValue(new WorldTileCoord(world.X / 6, 0), 991) * 6f)
+        var primaryCenter = (MathF.Sin((world.X * 0.085f) + (worldSeed * 0.013f)) * 4.25f)
+            + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 6, 0), 991) * 6f)
             - 3f;
-        var secondaryCenter = (MathF.Cos((world.X * 0.048f) - (context.WorldSeed * 0.009f)) * 6.5f)
+        var secondaryCenter = (MathF.Cos((world.X * 0.048f) - (worldSeed * 0.009f)) * 6.5f)
             + 22f;
-        var primaryWidth = 1.8f + (context.GetStableUnitValue(new WorldTileCoord(world.X / 4, 1), 1441) * 0.9f);
-        var secondaryWidth = 1.4f + (context.GetStableUnitValue(new WorldTileCoord(world.X / 5, 2), 2111) * 0.7f);
+        var primaryWidth = 1.8f + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 4, 1), 1441) * 0.9f);
+        var secondaryWidth = 1.4f + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 5, 2), 2111) * 0.7f);
         return MathF.Abs(world.Y - primaryCenter) <= primaryWidth
             || MathF.Abs(world.Y - secondaryCenter) <= secondaryWidth;
+    }
+
+    private static float GetStableUnitValue(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord coord, int salt)
+    {
+        return GetStableHash(worldSpaceKind, worldSeed, coord, salt) / (float)int.MaxValue;
+    }
+
+    private static int GetStableHash(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord coord, int salt)
+    {
+        unchecked
+        {
+            var hash = 17;
+            hash = (hash * 31) + (int)worldSpaceKind;
+            hash = (hash * 31) + worldSeed;
+            hash = (hash * 31) + coord.X;
+            hash = (hash * 31) + coord.Y;
+            hash = (hash * 31) + salt;
+            hash ^= hash >> 16;
+            hash *= unchecked((int)0x7feb352d);
+            hash ^= hash >> 15;
+            hash *= unchecked((int)0x846ca68b);
+            hash ^= hash >> 16;
+            return hash & int.MaxValue;
+        }
     }
 }
