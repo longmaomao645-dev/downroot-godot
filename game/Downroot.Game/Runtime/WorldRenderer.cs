@@ -348,15 +348,16 @@ public sealed partial class WorldRenderer : Node2D
         Dictionary<WorldTileCoord, Sprite2D> spriteBucket)
     {
         var chunkOriginTile = WorldTileCoord.FromChunkAndLocal(chunk.Coord, new LocalTileCoord(0, 0), _runtime!.ChunkWidth, _runtime.ChunkHeight);
+        var ownershipMask = BuildDualGridOwnershipMask(chunkOriginTile, chunk.Surface.Width, chunk.Surface.Height, layerDef.VisualKind);
         for (var y = 0; y < chunk.Surface.Height; y++)
         {
             for (var x = 0; x < chunk.Surface.Width; x++)
             {
                 var displayTile = new WorldTileCoord(chunkOriginTile.X + x, chunkOriginTile.Y + y);
-                var topLeft = OwnsDualGridVisual(new WorldTileCoord(displayTile.X - 1, displayTile.Y - 1), layerDef.VisualKind);
-                var topRight = OwnsDualGridVisual(new WorldTileCoord(displayTile.X, displayTile.Y - 1), layerDef.VisualKind);
-                var bottomLeft = OwnsDualGridVisual(new WorldTileCoord(displayTile.X - 1, displayTile.Y), layerDef.VisualKind);
-                var bottomRight = OwnsDualGridVisual(displayTile, layerDef.VisualKind);
+                var topLeft = ownershipMask[x, y];
+                var topRight = ownershipMask[x + 1, y];
+                var bottomLeft = ownershipMask[x, y + 1];
+                var bottomRight = ownershipMask[x + 1, y + 1];
                 var variantIndex = CoverDualGridResolver.ResolveVariantIndex(topLeft, topRight, bottomLeft, bottomRight);
                 if (variantIndex == CoverDualGridResolver.Empty)
                 {
@@ -368,6 +369,22 @@ public sealed partial class WorldRenderer : Node2D
                 spriteBucket[displayTile] = sprite;
             }
         }
+    }
+
+    private bool[,] BuildDualGridOwnershipMask(WorldTileCoord chunkOriginTile, int width, int height, TerrainVisualKind visualKind)
+    {
+        var mask = new bool[width + 1, height + 1];
+        for (var cornerY = 0; cornerY <= height; cornerY++)
+        {
+            var worldY = chunkOriginTile.Y + cornerY - 1;
+            for (var cornerX = 0; cornerX <= width; cornerX++)
+            {
+                var sampleTile = new WorldTileCoord(chunkOriginTile.X + cornerX - 1, worldY);
+                mask[cornerX, cornerY] = OwnsDualGridVisual(sampleTile, visualKind);
+            }
+        }
+
+        return mask;
     }
 
     private bool OwnsDualGridVisual(WorldTileCoord tile, TerrainVisualKind visualKind)

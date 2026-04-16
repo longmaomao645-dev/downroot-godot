@@ -9,6 +9,8 @@ namespace Downroot.Gameplay.Runtime;
 
 public sealed class WorldRuntimeFacade(GameRuntime runtime)
 {
+    private readonly Dictionary<SurfaceSemanticCacheKey, SurfaceTileSemantic> _inferredSurfaceSemanticCache = [];
+
     private IEnumerable<LoadedWorldState> Worlds
     {
         get
@@ -57,7 +59,15 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
         }
 
         var world = GetWorld(worldSpaceKind);
-        return TerrainSemanticWorldSampler.SampleSemantic(world.WorldSpaceKind, world.WorldSeed, tile);
+        var key = new SurfaceSemanticCacheKey(world.WorldSpaceKind, world.WorldSeed, tile);
+        if (_inferredSurfaceSemanticCache.TryGetValue(key, out var semantic))
+        {
+            return semantic;
+        }
+
+        semantic = TerrainSemanticWorldSampler.SampleSemantic(world.WorldSpaceKind, world.WorldSeed, tile);
+        _inferredSurfaceSemanticCache[key] = semantic;
+        return semantic;
     }
 
     public ContentId? GetRaisedFeatureId(WorldSpaceKind worldSpaceKind, WorldTileCoord tile)
@@ -250,4 +260,9 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
 
         return false;
     }
+
+    private readonly record struct SurfaceSemanticCacheKey(
+        WorldSpaceKind WorldSpaceKind,
+        int WorldSeed,
+        WorldTileCoord Tile);
 }
