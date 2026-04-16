@@ -81,7 +81,7 @@ public sealed class BaseGameContentPack : IContentPack
         var venomiteRaisedId = new ContentId("basegame:venomite_raised");
 
         registrar.RegisterTerrain(new TerrainDef(grassId, "Grass", PackId, "packs/basegame/assets/world/terrain/ground/grass_dualgrid.png", 32, 32, 2, 1));
-        registrar.RegisterTerrain(new TerrainDef(dirtId, "Dirt", PackId, "packs/basegame/assets/world/terrain/ground/dirt_dualgrid.png", 32, 32, 0, 0, 4, 4));
+        registrar.RegisterTerrain(new TerrainDef(dirtId, "Dirt", PackId, "packs/basegame/assets/world/terrain/ground/dirt.png", 32, 32, 0, 0, 8, 4));
         registrar.RegisterTerrain(new TerrainDef(mountainId, "Mountain", PackId, "packs/basegame/assets/world/nature/rocks/stone.png", 32, 32, 0, 0));
         registrar.RegisterTerrain(new TerrainDef(riverWaterId, "River Water", PackId, "packs/basegame/assets/world/terrain/ground/water_dualgrid.png", 32, 32, 2, 1));
 

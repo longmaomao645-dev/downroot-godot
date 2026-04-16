@@ -1217,9 +1217,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private static (int AtlasColumn, int AtlasRow) ResolveDirtAtlasCoords(TerrainDef terrainDef, int variantIndex)
     {
-        return (
-            terrainDef.AtlasColumn + (variantIndex % terrainDef.VariantColumnCount),
-            terrainDef.AtlasRow + (variantIndex / terrainDef.VariantColumnCount));
+        return (terrainDef.AtlasColumn + variantIndex, terrainDef.AtlasRow);
     }
 
     private static int GetDeterministicTerrainVariantIndex(string terrainId, WorldTileCoord tile, int worldSeed, int variantCount)
