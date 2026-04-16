@@ -173,7 +173,7 @@ public sealed class BaseGameContentPack : IContentPack
             16,
             1,
             UseBehavior: ItemUseBehaviorKind.ThrowableWeapon,
-            ThrowableWeapon: new ThrowableWeaponDef(3, 176f)));
+            ThrowableWeapon: new ThrowableWeaponDef(3, 176f, 6, woodSpearItemId, true)));
         registrar.RegisterItem(new ItemDef(stoneWallItemId, "Stone Wall", PackId, "packs/basegame/assets/structures/walls/stone_wall.png", 32, 32, 32, stoneWallPlaceableId));
         registrar.RegisterItem(new ItemDef(stoneFloorItemId, "Stone Floor", PackId, "packs/basegame/assets/world/terrain/floors/stone_floor.png", 32, 32, 64, stoneFloorPlaceableId));
         registrar.RegisterItem(new ItemDef(workbenchItemId, "Workbench", PackId, "packs/basegame/assets/production/workstations/workbench.png", 28, 32, 8, workbenchPlaceableId));

@@ -12,6 +12,7 @@ public sealed class GameSimulation
     private const float AttackRange = 28f;
     private const int EmptyHandDamage = 1;
     private const float ThrowableHitRadius = 20f;
+    private const float ThrowableTraceStep = 8f;
 
     private readonly GameRuntime _runtime;
     private readonly WorldRuntimeFacade _worldFacade;
@@ -415,19 +416,22 @@ public sealed class GameSimulation
             return false;
         }
 
-        var throwDistance = selectedItem.ThrowableWeapon.ThrowSpeed;
-        var landingPosition = _movementSystem.ClampToWorldBounds(_runtime.Player.Position + direction * throwDistance);
-        var hitCreature = FindThrowableTarget(_runtime.Player.Position, landingPosition);
+        var throwable = selectedItem.ThrowableWeapon;
+        var maxThrowDistance = MathF.Min(throwable.ThrowSpeed, throwable.MaxThrowRangeTiles * 32f);
+        var trace = TraceThrowablePath(_runtime.Player.Position, direction, maxThrowDistance, throwable.RequiresLineOfSight);
+        var landingPosition = trace.LandingPosition;
+        var hitCreature = FindThrowableTarget(_runtime.Player.Position, landingPosition, throwable.RequiresLineOfSight);
         if (hitCreature is not null)
         {
-            _creatureSystem.DamageCreature(hitCreature, selectedItem.ThrowableWeapon.Damage);
+            _creatureSystem.DamageCreature(hitCreature, throwable.Damage);
+            landingPosition = hitCreature.Position;
         }
 
-        var dropPosition = hitCreature?.Position ?? landingPosition;
+        var dropPosition = landingPosition;
         var dropTile = _runtime.GetWorldTile(dropPosition);
         _worldFacade.AddRuntimeEntity(_runtime.ActiveWorldSpaceKind, new WorldEntityState(
             WorldEntityKind.ItemDrop,
-            slot.ItemId.Value,
+            throwable.RecoverAsItemId,
             _runtime.GetWorldPosition(dropTile),
             1,
             _runtime.ActiveWorldSpaceKind,
@@ -437,7 +441,7 @@ public sealed class GameSimulation
         return true;
     }
 
-    private WorldEntityState? FindThrowableTarget(System.Numerics.Vector2 origin, System.Numerics.Vector2 landingPosition)
+    private WorldEntityState? FindThrowableTarget(System.Numerics.Vector2 origin, System.Numerics.Vector2 landingPosition, bool requiresLineOfSight)
     {
         var throwVector = landingPosition - origin;
         var throwLengthSquared = throwVector.LengthSquared();
@@ -469,11 +473,60 @@ public sealed class GameSimulation
                 continue;
             }
 
+            if (requiresLineOfSight && !HasThrowableLineOfSight(origin, entity.Position))
+            {
+                continue;
+            }
+
             best = entity;
             bestAlong = along;
         }
 
         return best;
+    }
+
+    private (System.Numerics.Vector2 LandingPosition, bool Blocked) TraceThrowablePath(System.Numerics.Vector2 origin, System.Numerics.Vector2 direction, float maxDistance, bool requiresLineOfSight)
+    {
+        var travelled = 0f;
+        var lastFree = origin;
+        while (travelled < maxDistance)
+        {
+            travelled = MathF.Min(maxDistance, travelled + ThrowableTraceStep);
+            var sample = _movementSystem.ClampToWorldBounds(origin + direction * travelled);
+            if (requiresLineOfSight && _movementSystem.IsBlocked(sample))
+            {
+                return (lastFree, true);
+            }
+
+            lastFree = sample;
+        }
+
+        return (lastFree, false);
+    }
+
+    private bool HasThrowableLineOfSight(System.Numerics.Vector2 origin, System.Numerics.Vector2 target)
+    {
+        var vector = target - origin;
+        var distance = vector.Length();
+        if (distance <= ThrowableTraceStep)
+        {
+            return true;
+        }
+
+        var direction = MovementSystem.NormalizeMovement(vector);
+        var travelled = ThrowableTraceStep;
+        while (travelled < distance)
+        {
+            var sample = _movementSystem.ClampToWorldBounds(origin + direction * travelled);
+            if (_movementSystem.IsBlocked(sample))
+            {
+                return false;
+            }
+
+            travelled += ThrowableTraceStep;
+        }
+
+        return true;
     }
 
     private ItemDef? GetSelectedItemDef()

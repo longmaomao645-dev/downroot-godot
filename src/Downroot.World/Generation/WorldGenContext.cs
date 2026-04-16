@@ -13,9 +13,13 @@ public sealed class WorldGenContext(
     ContentRegistrySet registries,
     IList<WorldSpawnDef> spawns) : IWorldGenContext
 {
-    public WorldSpaceKind WorldSpaceKind { get; } = worldSpaceKind;
-    public int WorldSeed { get; } = worldSeed;
-    public ChunkCoord ChunkCoord { get; } = chunkCoord;
+    private readonly WorldSpaceKind _worldSpaceKind = worldSpaceKind;
+    private readonly int _worldSeed = worldSeed;
+    private readonly ChunkCoord _chunkCoord = chunkCoord;
+
+    public WorldSpaceKind WorldSpaceKind => _worldSpaceKind;
+    public int WorldSeed => _worldSeed;
+    public ChunkCoord ChunkCoord => _chunkCoord;
     public int Width => surface.Width;
     public int Height => surface.Height;
 
@@ -23,7 +27,7 @@ public sealed class WorldGenContext(
 
     public WorldTileCoord GetWorldTileCoord(LocalTileCoord coord)
     {
-        return WorldTileCoord.FromChunkAndLocal(chunkCoord, coord, surface.Width, surface.Height);
+        return WorldTileCoord.FromChunkAndLocal(_chunkCoord, coord, surface.Width, surface.Height);
     }
 
     public int GetStableHash(WorldTileCoord coord, int salt)
@@ -31,8 +35,8 @@ public sealed class WorldGenContext(
         unchecked
         {
             var hash = 17;
-            hash = (hash * 31) + (int)worldSpaceKind;
-            hash = (hash * 31) + worldSeed;
+            hash = (hash * 31) + (int)_worldSpaceKind;
+            hash = (hash * 31) + _worldSeed;
             hash = (hash * 31) + coord.X;
             hash = (hash * 31) + coord.Y;
             hash = (hash * 31) + salt;
