@@ -10,7 +10,7 @@ namespace Downroot.Game.Runtime;
 
 public partial class GameRoot : Node2D
 {
-    private const bool EnableRuntimeProfiler = false;
+    private const bool EnableRuntimeProfiler = true;
     private GameRuntime? _runtime;
     private GameSimulation? _simulation;
     private IInputService? _inputService;
@@ -56,7 +56,7 @@ public partial class GameRoot : Node2D
 
             _startupOverlay.UpdateStatus("Bootstrapping runtime");
             RuntimeProfiler.Enabled = EnableRuntimeProfiler;
-            RuntimeProfiler.Configure(message => GD.Print(message), frameWindow: 60);
+            RuntimeProfiler.Configure(message => GD.Print(message), frameWindow: 30);
             if (_runtime is null)
             {
                 throw new InvalidOperationException("GameRoot requires a preconfigured runtime.");

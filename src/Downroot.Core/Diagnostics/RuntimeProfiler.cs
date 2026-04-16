@@ -11,6 +11,11 @@ public static class RuntimeProfiler
         public int Samples;
     }
 
+    private sealed class CounterAggregate
+    {
+        public long Total;
+    }
+
     public readonly ref struct Scope
     {
         private readonly string _name;
@@ -30,6 +35,7 @@ public static class RuntimeProfiler
 
     private static readonly object Sync = new();
     private static readonly Dictionary<string, SectionAggregate> SectionAggregates = [];
+    private static readonly Dictionary<string, CounterAggregate> CounterAggregates = [];
     private static Action<string> _logger = Console.WriteLine;
     private static int _frameWindow = 60;
     private static int _frameCount;
@@ -55,6 +61,25 @@ public static class RuntimeProfiler
     public static Scope Measure(string name)
     {
         return Enabled ? new Scope(name) : default;
+    }
+
+    public static void Increment(string name, long amount = 1)
+    {
+        if (!Enabled)
+        {
+            return;
+        }
+
+        lock (Sync)
+        {
+            if (!CounterAggregates.TryGetValue(name, out var aggregate))
+            {
+                aggregate = new CounterAggregate();
+                CounterAggregates[name] = aggregate;
+            }
+
+            aggregate.Total += amount;
+        }
     }
 
     public static void BeginFrame()
@@ -123,10 +148,16 @@ public static class RuntimeProfiler
                 $"[Profiler] {pair.Key} avg={ToMilliseconds(averageTicks):F2}ms max={ToMilliseconds(pair.Value.MaxTicks):F2}ms samples={pair.Value.Samples}");
         }
 
+        foreach (var pair in CounterAggregates.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            _logger($"[Profiler] {pair.Key} count={pair.Value.Total}");
+        }
+
         _frameCount = 0;
         _frameTotalTicks = 0;
         _frameMaxTicks = 0;
         SectionAggregates.Clear();
+        CounterAggregates.Clear();
     }
 
     private static double ToMilliseconds(long ticks) => ticks * 1000d / Stopwatch.Frequency;

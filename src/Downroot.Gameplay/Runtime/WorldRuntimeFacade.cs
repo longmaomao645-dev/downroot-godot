@@ -1,5 +1,6 @@
 using System.Numerics;
 using Downroot.Core.Definitions;
+using Downroot.Core.Diagnostics;
 using Downroot.Core.Gameplay;
 using Downroot.Core.Ids;
 using Downroot.Core.World;
@@ -53,8 +54,10 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
 
     public SurfaceTileSemantic SampleSurfaceSemantic(WorldSpaceKind worldSpaceKind, WorldTileCoord tile)
     {
+        RuntimeProfiler.Increment("SurfaceSemantic.Sample");
         if (TryGetChunkForTile(worldSpaceKind, tile, out var chunk, out var localCoord))
         {
+            RuntimeProfiler.Increment("SurfaceSemantic.LoadedHit");
             return chunk.GeneratedChunk.Surface.GetSurfaceSemantic(localCoord.X, localCoord.Y);
         }
 
@@ -62,10 +65,16 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
         var key = new SurfaceSemanticCacheKey(world.WorldSpaceKind, world.WorldSeed, tile);
         if (_inferredSurfaceSemanticCache.TryGetValue(key, out var semantic))
         {
+            RuntimeProfiler.Increment("SurfaceSemantic.CacheHit");
             return semantic;
         }
 
-        semantic = TerrainSemanticWorldSampler.SampleSemantic(world.WorldSpaceKind, world.WorldSeed, tile);
+        RuntimeProfiler.Increment("SurfaceSemantic.CacheMiss");
+        using (RuntimeProfiler.Measure("SurfaceSemantic.InferMiss"))
+        {
+            semantic = TerrainSemanticWorldSampler.SampleSemantic(world.WorldSpaceKind, world.WorldSeed, tile);
+        }
+
         _inferredSurfaceSemanticCache[key] = semantic;
         return semantic;
     }

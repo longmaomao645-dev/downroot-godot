@@ -213,6 +213,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private void SynchronizeChunks()
     {
+        using var scope = RuntimeProfiler.Measure("WorldRenderer.SynchronizeChunks");
         var world = _worldFacade!.GetActiveWorld();
         var desiredChunks = world.LoadedChunks.Keys.ToHashSet();
         foreach (var staleChunk in _chunkVisuals.Keys.Where(coord => !desiredChunks.Contains(coord)).ToArray())
@@ -240,6 +241,7 @@ public sealed partial class WorldRenderer : Node2D
             _terrainLayer.AddChild(boundsRoot);
             _entityLayer!.AddChild(entityRoot);
             _chunkVisuals.Add(pair.Key, new ChunkVisualState(terrainRoot, raisedFeatureRoot, entityRoot, boundsRoot));
+            RuntimeProfiler.Increment("WorldRenderer.NewChunkVisual");
             BuildChunkTerrain(pair.Value.GeneratedChunk, _chunkVisuals[pair.Key]);
             BuildChunkRaisedFeatures(pair.Value, _chunkVisuals[pair.Key]);
         }
@@ -274,6 +276,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private void BuildChunkTerrain(Downroot.World.Models.GeneratedChunk chunk, ChunkVisualState visual)
     {
+        using var scope = RuntimeProfiler.Measure("WorldRenderer.BuildChunkTerrain");
         BuildChunkTerrainBase(chunk, visual);
         BuildChunkDualGridTerrainLayers(chunk, visual);
     }
@@ -347,6 +350,7 @@ public sealed partial class WorldRenderer : Node2D
         DualGridLayerDef layerDef,
         Dictionary<WorldTileCoord, Sprite2D> spriteBucket)
     {
+        using var scope = RuntimeProfiler.Measure($"WorldRenderer.BuildDualGridLayer.{layerDef.VisualKind}");
         var chunkOriginTile = WorldTileCoord.FromChunkAndLocal(chunk.Coord, new LocalTileCoord(0, 0), _runtime!.ChunkWidth, _runtime.ChunkHeight);
         var ownershipMask = BuildDualGridOwnershipMask(chunkOriginTile, chunk.Surface.Width, chunk.Surface.Height, layerDef.VisualKind);
         for (var y = 0; y < chunk.Surface.Height; y++)
@@ -373,6 +377,8 @@ public sealed partial class WorldRenderer : Node2D
 
     private bool[,] BuildDualGridOwnershipMask(WorldTileCoord chunkOriginTile, int width, int height, TerrainVisualKind visualKind)
     {
+        using var scope = RuntimeProfiler.Measure($"WorldRenderer.BuildDualGridMask.{visualKind}");
+        RuntimeProfiler.Increment("WorldRenderer.BuildDualGridMask");
         var mask = new bool[width + 1, height + 1];
         for (var cornerY = 0; cornerY <= height; cornerY++)
         {
@@ -380,6 +386,7 @@ public sealed partial class WorldRenderer : Node2D
             for (var cornerX = 0; cornerX <= width; cornerX++)
             {
                 var sampleTile = new WorldTileCoord(chunkOriginTile.X + cornerX - 1, worldY);
+                RuntimeProfiler.Increment("WorldRenderer.DualGridOwnershipQuery");
                 mask[cornerX, cornerY] = OwnsDualGridVisual(sampleTile, visualKind);
             }
         }

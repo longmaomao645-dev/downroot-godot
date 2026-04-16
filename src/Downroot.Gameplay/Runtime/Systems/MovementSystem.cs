@@ -1,5 +1,6 @@
 using System.Numerics;
 using Downroot.Core.Ids;
+using Downroot.Core.Diagnostics;
 using Downroot.Core.World;
 
 namespace Downroot.Gameplay.Runtime.Systems;
@@ -46,10 +47,13 @@ public sealed class MovementSystem(GameRuntime runtime, WorldRuntimeFacade world
 
     public bool IsBlocked(Vector2 position, EntityId? ignoreEntityId = null)
     {
+        using var scope = RuntimeProfiler.Measure("Movement.IsBlocked");
+        RuntimeProfiler.Increment("Movement.IsBlocked.Call");
         var tile = worldFacade.GetWorldTile(position);
         var surfaceSemantic = worldFacade.SampleSurfaceSemantic(runtime.ActiveWorldSpaceKind, tile);
         if (surfaceSemantic.Surface is SurfaceGameplayKind.SolidRock or SurfaceGameplayKind.Water)
         {
+            RuntimeProfiler.Increment("Movement.IsBlocked.SurfaceBlocked");
             return true;
         }
 
@@ -60,6 +64,7 @@ public sealed class MovementSystem(GameRuntime runtime, WorldRuntimeFacade world
             var raisedFeature = runtime.Content.RaisedFeatures.Get(raisedFeatureId.Value);
             if (raisedFeature.BlocksMovement)
             {
+                RuntimeProfiler.Increment("Movement.IsBlocked.RaisedBlocked");
                 return true;
             }
         }
