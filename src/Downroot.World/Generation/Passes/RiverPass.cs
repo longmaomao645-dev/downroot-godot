@@ -36,6 +36,9 @@ public sealed class RiverPass(ContentId riverTerrainId) : IWorldGenPass
         => IsRiverTile(context.WorldSpaceKind, context.WorldSeed, world);
 
     public static bool IsRiverTile(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord world)
+        => SampleNearestNormalizedDistance(worldSpaceKind, worldSeed, world) <= 1f;
+
+    public static float SampleNearestNormalizedDistance(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord world)
     {
         var primaryCenter = (MathF.Sin((world.X * 0.085f) + (worldSeed * 0.013f)) * 4.25f)
             + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 6, 0), 991) * 6f)
@@ -44,8 +47,9 @@ public sealed class RiverPass(ContentId riverTerrainId) : IWorldGenPass
             + 22f;
         var primaryWidth = 1.8f + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 4, 1), 1441) * 0.9f);
         var secondaryWidth = 1.4f + (GetStableUnitValue(worldSpaceKind, worldSeed, new WorldTileCoord(world.X / 5, 2), 2111) * 0.7f);
-        return MathF.Abs(world.Y - primaryCenter) <= primaryWidth
-            || MathF.Abs(world.Y - secondaryCenter) <= secondaryWidth;
+        var primaryDistance = MathF.Abs(world.Y - primaryCenter) / primaryWidth;
+        var secondaryDistance = MathF.Abs(world.Y - secondaryCenter) / secondaryWidth;
+        return MathF.Min(primaryDistance, secondaryDistance);
     }
 
     private static float GetStableUnitValue(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord coord, int salt)

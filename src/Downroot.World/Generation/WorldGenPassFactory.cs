@@ -13,6 +13,7 @@ public static class WorldGenPassFactory
             WorldGenPassTypes.FillTerrain => new FillTerrainPass(definition.TargetId, definition.PrimarySurfaceRegion ?? SurfaceRegions.DirtField),
             WorldGenPassTypes.SurfaceRegion => new GrassRegionPass(definition.TargetId),
             WorldGenPassTypes.River => new RiverPass(definition.TargetId),
+            WorldGenPassTypes.TerrainSemantics => new TerrainSemanticPass(),
             WorldGenPassTypes.RaisedOreField => new RaisedOreFieldPass(definition.TargetId, new RaisedOreFieldRuleResolver(registries)),
             WorldGenPassTypes.RockOutcrop => new RockOutcropPass(definition.TargetId),
             WorldGenPassTypes.PortalSite => new PortalSitePass(definition.TargetId, registries.PortalWorldLinks.ToArray()),

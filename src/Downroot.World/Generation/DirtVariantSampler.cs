@@ -33,18 +33,18 @@ public static class DirtVariantSampler
 
     private static float ApplySemanticBias(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, float stoniness)
     {
-        var region = SurfaceRegionSampler.SampleSurfaceRegion(worldSpaceKind, worldSeed, worldTile);
-        if (HasNearbyRiver(worldSpaceKind, worldSeed, worldTile, 2))
+        var semantic = TerrainSemanticWorldSampler.SampleSemantic(worldSpaceKind, worldSeed, worldTile);
+        if (HasNearbyVisual(worldSpaceKind, worldSeed, worldTile, 2, TerrainVisualKind.ShallowWater, TerrainVisualKind.DeepWater))
         {
             stoniness += NearRiverBias;
         }
 
-        if (region == SurfaceRegions.DirtField && HasNearbyGrass(worldSpaceKind, worldSeed, worldTile))
+        if (semantic.Visual == TerrainVisualKind.Dirt && HasNearbyVisual(worldSpaceKind, worldSeed, worldTile, 1, TerrainVisualKind.Grass))
         {
             stoniness += NearGrassEdgeBias;
         }
 
-        if (IsOpenDirtInterior(worldSpaceKind, worldSeed, worldTile))
+        if (IsOpenDirtInterior(worldSpaceKind, worldSeed, worldTile, semantic.Visual))
         {
             stoniness += OpenDirtInteriorBias;
         }
@@ -52,7 +52,7 @@ public static class DirtVariantSampler
         return Math.Clamp(stoniness, 0f, 1f);
     }
 
-    private static bool HasNearbyRiver(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, int radius)
+    private static bool HasNearbyVisual(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, int radius, params TerrainVisualKind[] visuals)
     {
         for (var dy = -radius; dy <= radius; dy++)
         {
@@ -63,7 +63,8 @@ public static class DirtVariantSampler
                     continue;
                 }
 
-                if (SurfaceRegionSampler.SampleSurfaceRegion(worldSpaceKind, worldSeed, new WorldTileCoord(worldTile.X + dx, worldTile.Y + dy)) == SurfaceRegions.River)
+                var sampled = TerrainSemanticWorldSampler.SampleVisual(worldSpaceKind, worldSeed, new WorldTileCoord(worldTile.X + dx, worldTile.Y + dy));
+                if (visuals.Contains(sampled))
                 {
                     return true;
                 }
@@ -73,36 +74,15 @@ public static class DirtVariantSampler
         return false;
     }
 
-    private static bool HasNearbyGrass(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
+    private static bool IsOpenDirtInterior(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, TerrainVisualKind visual)
     {
-        for (var dy = -1; dy <= 1; dy++)
-        {
-            for (var dx = -1; dx <= 1; dx++)
-            {
-                if (dx == 0 && dy == 0)
-                {
-                    continue;
-                }
-
-                if (SurfaceRegionSampler.SampleSurfaceRegion(worldSpaceKind, worldSeed, new WorldTileCoord(worldTile.X + dx, worldTile.Y + dy)) == SurfaceRegions.GrassField)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsOpenDirtInterior(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
-    {
-        if (SurfaceRegionSampler.SampleSurfaceRegion(worldSpaceKind, worldSeed, worldTile) != SurfaceRegions.DirtField)
+        if (visual != TerrainVisualKind.Dirt)
         {
             return false;
         }
 
-        return !HasNearbyGrass(worldSpaceKind, worldSeed, worldTile)
-            && !HasNearbyRiver(worldSpaceKind, worldSeed, worldTile, 2);
+        return !HasNearbyVisual(worldSpaceKind, worldSeed, worldTile, 1, TerrainVisualKind.Grass)
+            && !HasNearbyVisual(worldSpaceKind, worldSeed, worldTile, 2, TerrainVisualKind.ShallowWater, TerrainVisualKind.DeepWater);
     }
 
     private static float SampleValueNoise(WorldSpaceKind worldSpaceKind, int worldSeed, float x, float y, int seed)

@@ -74,8 +74,7 @@ public sealed class SurfaceSemanticSampler(WorldRuntimeFacade worldFacade, GameR
     private bool TryInferSemantic(WorldTileCoord tile, out SurfaceTileSemantic semantic)
     {
         var world = worldFacade.GetActiveWorld();
-        var region = SurfaceRegionSampler.SampleSurfaceRegion(world.WorldSpaceKind, world.WorldSeed, tile);
-        semantic = SurfaceSemanticDefaults.CreateForRegion(world.WorldSpaceKind, region);
+        semantic = TerrainSemanticWorldSampler.SampleSemantic(world.WorldSpaceKind, world.WorldSeed, tile);
         return true;
     }
 }

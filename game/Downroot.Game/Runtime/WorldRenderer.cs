@@ -20,7 +20,8 @@ public sealed partial class WorldRenderer : Node2D
     private const int EntityBandLayerZ = 768;
     private const int ChunkBoundsLayerZ = 1536;
     private const int MaxEntitySortSpan = 1023;
-    private const string GrassTerrainId = "basegame:grass";
+    private static readonly ContentId DirtTerrainId = new("basegame:dirt");
+    private static readonly ContentId RiverWaterTerrainId = new("basegame:river_water");
 
     private readonly TextureContentLoader _textureLoader;
     private readonly PlayerAnimationFactory _animationFactory;
@@ -287,29 +288,55 @@ public sealed partial class WorldRenderer : Node2D
             for (var x = 0; x < chunk.Surface.Width; x++)
             {
                 var worldTile = new WorldTileCoord(chunkOriginTile.X + x, chunkOriginTile.Y + y);
-                var baseTerrainId = chunk.Surface.GetBaseTerrainId(x, y) ?? _runtime.BootstrapConfig.DefaultTerrainId;
+                var baseTerrainId = ResolveBaseTerrainId(chunk, x, y);
                 var baseTerrainDef = _runtime.Content.Terrains.Get(baseTerrainId);
                 var baseSprite = CreateTerrainSprite($"BaseTerrain_{x}_{y}", worldTile, baseTerrainDef, 0);
                 visual.TerrainRoot.AddChild(baseSprite);
                 visual.BaseTerrainSprites[worldTile] = baseSprite;
 
                 var coverTerrainId = chunk.Surface.GetCoverTerrainId(x, y);
-                if (coverTerrainId is null)
+                if (coverTerrainId is null || !ShouldRenderLegacyCoverTerrain(chunk, x, y))
                 {
                     continue;
                 }
 
                 var coverTerrainDef = _runtime.Content.Terrains.Get(coverTerrainId.Value);
-                if (coverTerrainDef.Id.Value == GrassTerrainId)
-                {
-                    continue;
-                }
-
                 var coverSprite = CreateTerrainSprite($"CoverTerrain_{x}_{y}", worldTile, coverTerrainDef, 1);
                 visual.TerrainRoot.AddChild(coverSprite);
                 visual.CoverTerrainSprites[worldTile] = coverSprite;
             }
         }
+    }
+
+    private ContentId ResolveBaseTerrainId(Downroot.World.Models.GeneratedChunk chunk, int x, int y)
+    {
+        if (chunk.WorldSpaceKind != WorldSpaceKind.Overworld)
+        {
+            return chunk.Surface.GetBaseTerrainId(x, y) ?? _runtime!.BootstrapConfig.DefaultTerrainId;
+        }
+
+        var visualKind = chunk.Surface.GetVisualKind(x, y);
+        return visualKind switch
+        {
+            TerrainVisualKind.ShallowWater => RiverWaterTerrainId,
+            TerrainVisualKind.DeepWater => RiverWaterTerrainId,
+            TerrainVisualKind.Mountain => DirtTerrainId,
+            _ => DirtTerrainId
+        };
+    }
+
+    private static bool ShouldRenderLegacyCoverTerrain(Downroot.World.Models.GeneratedChunk chunk, int x, int y)
+    {
+        if (chunk.WorldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            var visualKind = chunk.Surface.GetVisualKind(x, y);
+            return visualKind is not TerrainVisualKind.Grass
+                and not TerrainVisualKind.Beach
+                and not TerrainVisualKind.DeepWater
+                and not TerrainVisualKind.ShallowWater;
+        }
+
+        return true;
     }
 
     private Sprite2D CreateTerrainSprite(string name, WorldTileCoord worldTile, TerrainDef terrainDef, int zIndex)
@@ -669,7 +696,7 @@ public sealed partial class WorldRenderer : Node2D
             CoverDualGridResolver.DiagonalA => (0, 1),
             CoverDualGridResolver.DiagonalB => (2, 3),
             CoverDualGridResolver.Full => (2, 1),
-            _ => throw new ArgumentOutOfRangeException(nameof(variantIndex), $"Unsupported grass dual-grid variant '{variantIndex}'.")
+            _ => throw new ArgumentOutOfRangeException(nameof(variantIndex), $"Unsupported dual-grid variant '{variantIndex}'.")
         };
     }
 

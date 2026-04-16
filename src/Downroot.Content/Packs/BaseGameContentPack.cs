@@ -79,9 +79,9 @@ public sealed class BaseGameContentPack : IContentPack
         var goldveinRaisedId = new ContentId("basegame:goldvein_raised");
         var venomiteRaisedId = new ContentId("basegame:venomite_raised");
 
-        registrar.RegisterTerrain(new TerrainDef(grassId, "Grass", PackId, "packs/basegame/assets/world/terrain/ground/grass.png", 32, 32, 0, 0));
+        registrar.RegisterTerrain(new TerrainDef(grassId, "Grass", PackId, "packs/basegame/assets/world/terrain/ground/grass_dualgrid.png", 32, 32, 2, 1));
         registrar.RegisterTerrain(new TerrainDef(dirtId, "Dirt", PackId, "packs/basegame/assets/world/terrain/ground/dirt.png", 32, 32, 0, 0, 8, 4));
-        registrar.RegisterTerrain(new TerrainDef(riverWaterId, "River Water", PackId, "packs/basegame/assets/world/terrain/ground/river_water.png", 32, 32, 0, 0));
+        registrar.RegisterTerrain(new TerrainDef(riverWaterId, "River Water", PackId, "packs/basegame/assets/world/terrain/ground/water_dualgrid.png", 32, 32, 2, 1));
 
         registrar.RegisterPlaceable(new PlaceableDef(furnacePlaceableId, "Furnace", PackId, "packs/basegame/assets/production/utility/furnace.png", 32, 32, 0, 0, 5, true, CraftingStationKind.Furnace, true, Behaviors: PlaceableBehaviorKind.CraftingStation));
         registrar.RegisterPlaceable(new PlaceableDef(stoneWallPlaceableId, "Stone Wall", PackId, "packs/basegame/assets/structures/walls/stone_wall.png", 32, 32, 0, 0, 5, false, null, true, LightOccluder: new LightOccluderDef(true, LightingFootprintKind.Tile)));
@@ -258,6 +258,7 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-fill-dirt"), WorldGenPassTypes.FillTerrain, dirtId, WorldSpaceKind.Overworld, PrimarySurfaceRegion: SurfaceRegions.DirtField));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-surface-region"), WorldGenPassTypes.SurfaceRegion, grassId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-river"), WorldGenPassTypes.River, riverWaterId, WorldSpaceKind.Overworld));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-terrain-semantics"), WorldGenPassTypes.TerrainSemantics, dirtId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-voidite"), WorldGenPassTypes.RaisedOreField, voiditeRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-goldvein"), WorldGenPassTypes.RaisedOreField, goldveinRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-venomite"), WorldGenPassTypes.RaisedOreField, venomiteRaisedId, WorldSpaceKind.Overworld));

@@ -23,17 +23,6 @@ public static class SurfaceRegionSampler
 
     public static string SampleOverworldSurfaceRegion(int worldSeed, WorldTileCoord worldTile)
     {
-        if (RiverPass.IsRiverTile(WorldSpaceKind.Overworld, worldSeed, worldTile))
-        {
-            return SurfaceRegions.River;
-        }
-
-        var grass = GrassRegionPass.SampleLayeredNoise(WorldSpaceKind.Overworld, worldSeed, worldTile);
-        if (grass >= GrassRegionPass.GrassThreshold)
-        {
-            return SurfaceRegions.GrassField;
-        }
-
-        return SurfaceRegions.DirtField;
+        return TerrainSemanticWorldSampler.SampleSurfaceRegion(WorldSpaceKind.Overworld, worldSeed, worldTile);
     }
 }
