@@ -7,7 +7,8 @@ namespace Downroot.Gameplay.Runtime.Systems;
 
 public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade worldFacade)
 {
-    private const int ChunkLoadCommitBudgetPerTick = 1;
+    private const int NearChunkCommitBudgetPerTick = 3;
+    private const int FarChunkCommitBudgetPerTick = 1;
 
     private readonly Dictionary<PendingChunkLoadKey, PendingChunkLoad> _pendingChunkLoads = [];
     private readonly Dictionary<WorldSpaceKind, HashSet<ChunkCoord>> _desiredChunksByWorld = [];
@@ -81,7 +82,8 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
 
         _desiredChunksByWorld[world.WorldSpaceKind] = desired;
         _desiredCentersByWorld[world.WorldSpaceKind] = centerChunk;
-        var changed = ProcessCompletedChunkLoads();
+        var changed = EnsureCenterChunkLoaded(world, centerChunk, useAsyncGeneration);
+        changed |= ProcessCompletedChunkLoads();
 
         foreach (var coord in desired.OrderBy(coord => GetChunkPriority(coord, centerChunk)).ThenBy(coord => coord.Y).ThenBy(coord => coord.X))
         {
@@ -117,6 +119,27 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
         return changed;
     }
 
+    private bool EnsureCenterChunkLoaded(LoadedWorldState world, ChunkCoord centerChunk, bool useAsyncGeneration)
+    {
+        if (!useAsyncGeneration || world.LoadedChunks.ContainsKey(centerChunk) || !world.ContainsChunk(centerChunk))
+        {
+            return false;
+        }
+
+        var key = new PendingChunkLoadKey(world.WorldSpaceKind, centerChunk);
+        if (_pendingChunkLoads.Remove(key))
+        {
+            RuntimeProfiler.Increment("WorldStreaming.CenterChunkPromoted");
+        }
+
+        using var scope = RuntimeProfiler.Measure("WorldStreaming.GenerateCenterChunkSync");
+        var generated = worldFacade.GetGenerator(world.WorldSpaceKind)
+            .GenerateChunk(world.WorldSpaceKind, world.WorldSeed, centerChunk, runtime.ChunkWidth, runtime.ChunkHeight);
+        world.LoadChunk(generated, chunk => GameBootstrapper.CreateChunkRuntimeState(runtime, chunk));
+        RuntimeProfiler.Increment("WorldStreaming.CenterChunkLoadedSync");
+        return true;
+    }
+
     private void QueueChunkLoad(LoadedWorldState world, ChunkCoord coord)
     {
         var key = new PendingChunkLoadKey(world.WorldSpaceKind, coord);
@@ -142,7 +165,6 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
     private bool ProcessCompletedChunkLoads()
     {
         var changed = false;
-        var committed = 0;
         var orderedCompletedLoads = _pendingChunkLoads
             .Where(pair => pair.Value.Task.IsCompleted)
             .OrderBy(pair => GetPendingChunkPriority(pair.Key))
@@ -150,13 +172,10 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
             .ThenBy(pair => pair.Key.Coord.X)
             .ToArray();
 
+        var committedNear = 0;
+        var committedFar = 0;
         foreach (var pair in orderedCompletedLoads)
         {
-            if (committed >= ChunkLoadCommitBudgetPerTick)
-            {
-                break;
-            }
-
             _pendingChunkLoads.Remove(pair.Key);
             var result = pair.Value.Task.GetAwaiter().GetResult();
             var world = worldFacade.GetWorld(result.WorldSpaceKind);
@@ -165,6 +184,21 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
                 || world.LoadedChunks.ContainsKey(result.Coord))
             {
                 RuntimeProfiler.Increment("WorldStreaming.ChunkLoadDiscarded");
+                continue;
+            }
+
+            var priority = GetPendingChunkPriority(pair.Key);
+            if (priority <= 1)
+            {
+                if (committedNear >= NearChunkCommitBudgetPerTick)
+                {
+                    _pendingChunkLoads[pair.Key] = pair.Value;
+                    continue;
+                }
+            }
+            else if (committedFar >= FarChunkCommitBudgetPerTick)
+            {
+                _pendingChunkLoads[pair.Key] = pair.Value;
                 continue;
             }
 
@@ -181,7 +215,14 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
             }
 
             changed = true;
-            committed++;
+            if (priority <= 1)
+            {
+                committedNear++;
+            }
+            else
+            {
+                committedFar++;
+            }
         }
 
         return changed;
