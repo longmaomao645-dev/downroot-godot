@@ -28,8 +28,8 @@ public static class TerrainRegionClassifier
             mountainCoreScore >= 0.74f ? TerrainRegionKind.MountainCore :
             mountainFootScore >= 0.64f ? TerrainRegionKind.MountainFoot :
             riverBankScore >= 0.58f ? TerrainRegionKind.RiverBank :
-            forestScore >= 0.62f ? TerrainRegionKind.ForestCore :
-            forestScore >= 0.48f && openScore < 0.70f ? TerrainRegionKind.ForestEdge :
+            forestScore >= 0.57f ? TerrainRegionKind.ForestCore :
+            forestScore >= 0.44f && openScore < 0.76f ? TerrainRegionKind.ForestEdge :
             fields.MoistureMacro <= 0.34f && fields.RiverBase <= 1.75f && openScore >= 0.47f ? TerrainRegionKind.MudFlat :
             TerrainRegionKind.OpenLowland;
 

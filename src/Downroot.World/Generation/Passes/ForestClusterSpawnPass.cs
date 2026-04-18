@@ -77,6 +77,7 @@ public sealed class ForestClusterSpawnPass(
                     coord,
                     region,
                     score,
+                    score,
                     biome,
                     context.GetStableUnitValue(world, 7001 + ((int)biome * 43))));
             }
@@ -89,7 +90,7 @@ public sealed class ForestClusterSpawnPass(
         }
 
         var chosen = new List<TreeSpawnCandidate>();
-        foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Density))
+        foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Score))
         {
             if (chosen.Count >= desiredCount)
             {
@@ -130,25 +131,25 @@ public sealed class ForestClusterSpawnPass(
             TreeBiomeKind.TemperateForestCore => region switch
             {
                 TerrainRegionKind.ForestCore => 0.95f,
-                TerrainRegionKind.ForestEdge => 0.35f,
+                TerrainRegionKind.ForestEdge => 0.58f,
                 _ => -100f
             },
             TreeBiomeKind.ConiferMountainFoot => region switch
             {
                 TerrainRegionKind.MountainFoot => 0.92f,
-                TerrainRegionKind.ForestCore => 0.28f,
+                TerrainRegionKind.ForestCore => 0.54f,
                 _ => -100f
             },
             TreeBiomeKind.SparseForestEdge => region switch
             {
                 TerrainRegionKind.ForestEdge => 0.88f,
-                TerrainRegionKind.OpenLowland => 0.20f,
+                TerrainRegionKind.OpenLowland => 0.46f,
                 _ => -100f
             },
             TreeBiomeKind.OpenLowlandSparse => region switch
             {
                 TerrainRegionKind.OpenLowland => 0.70f,
-                TerrainRegionKind.ForestEdge => 0.16f,
+                TerrainRegionKind.ForestEdge => 0.28f,
                 _ => -100f
             },
             _ => -100f
@@ -187,7 +188,7 @@ public sealed class ForestClusterSpawnPass(
         return Math.Clamp(desired, 0, viableCandidateCount);
     }
 
-    private static float GetMinimumAcceptedScore() => 0.50f;
+    private static float GetMinimumAcceptedScore() => 0.42f;
 
     private static int DistanceSquared(LocalTileCoord a, LocalTileCoord b)
     {

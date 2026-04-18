@@ -275,13 +275,17 @@ public static class TerrainSemanticWorldSampler
 
     private static SurfaceTileSemantic CreateSemantic(TerrainVisualKind visual, HeightKind height, ShoreProfileKind shoreProfile)
     {
+        var supportsTrees = visual == TerrainVisualKind.Grass
+            || (visual == TerrainVisualKind.Dirt && height == HeightKind.Raised)
+            || (visual == TerrainVisualKind.Dirt && shoreProfile == ShoreProfileKind.None);
+
         return visual switch
         {
             TerrainVisualKind.DeepWater => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Water, height, shoreProfile, false, false, false),
             TerrainVisualKind.ShallowWater => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Wadeable, height, shoreProfile, false, false, false),
             TerrainVisualKind.Beach => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Ground, height, shoreProfile, false, true, false),
-            TerrainVisualKind.Dirt => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Ground, height, shoreProfile, true, true, false),
-            TerrainVisualKind.Grass => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Ground, height, shoreProfile, true, true, true),
+            TerrainVisualKind.Dirt => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Ground, height, shoreProfile, true, true, supportsTrees),
+            TerrainVisualKind.Grass => new SurfaceTileSemantic(visual, SurfaceGameplayKind.Ground, height, shoreProfile, true, true, supportsTrees),
             TerrainVisualKind.Mountain => new SurfaceTileSemantic(visual, SurfaceGameplayKind.SolidRock, height, shoreProfile, false, true, false),
             _ => new SurfaceTileSemantic(TerrainVisualKind.Dirt, SurfaceGameplayKind.Ground, HeightKind.Low, ShoreProfileKind.None, true, true, false)
         };
