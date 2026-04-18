@@ -15,4 +15,8 @@ public sealed record WorldGenPassDef(
     string? PrimarySurfaceRegion = null,
     int MinSpacing = 0,
     bool RequireBuildable = false,
-    bool RequireSupportsTrees = false);
+    bool RequireSupportsTrees = false,
+    TerrainRegionKind? RequiredTerrainRegion = null,
+    bool PreferForestCore = false,
+    bool PreferForestEdge = false,
+    bool AvoidRiverBank = false);

@@ -13,7 +13,11 @@ public sealed class ScatterSpawnPass(
     string? requiredSurfaceRegion,
     int minSpacing,
     bool requireBuildable,
-    bool requireSupportsTrees) : IWorldGenPass
+    bool requireSupportsTrees,
+    TerrainRegionKind? requiredTerrainRegion,
+    bool preferForestCore,
+    bool preferForestEdge,
+    bool avoidRiverBank) : IWorldGenPass
 {
     public string Name => WorldGenPassTypes.ScatterSpawn;
 
@@ -40,6 +44,17 @@ public sealed class ScatterSpawnPass(
                     continue;
                 }
 
+                var terrainRegion = context.SampleTerrainRegion(coord);
+                if (requiredTerrainRegion.HasValue && terrainRegion != requiredTerrainRegion.Value)
+                {
+                    continue;
+                }
+
+                if (avoidRiverBank && terrainRegion == TerrainRegionKind.RiverBank)
+                {
+                    continue;
+                }
+
                 var semantic = context.GetSurfaceSemantic(coord);
                 if (requireBuildable && !semantic.Buildable)
                 {
@@ -61,7 +76,7 @@ public sealed class ScatterSpawnPass(
         }
 
         var ordered = candidates
-            .OrderBy(coord => context.GetStableHash(context.GetWorldTileCoord(coord), targetId.Value.GetHashCode()))
+            .OrderByDescending(coord => ScoreCandidate(context, coord))
             .ToArray();
         var chosen = new List<LocalTileCoord>();
         foreach (var coord in ordered)
@@ -84,6 +99,47 @@ public sealed class ScatterSpawnPass(
             context.AddSpawn(coord, targetId);
             chosen.Add(coord);
         }
+    }
+
+    private float ScoreCandidate(IWorldGenContext context, LocalTileCoord coord)
+    {
+        var world = context.GetWorldTileCoord(coord);
+        var jitter = context.GetStableUnitValue(world, targetId.Value.GetHashCode());
+        if (!requireSupportsTrees && requiredTerrainRegion is null && !preferForestCore && !preferForestEdge && !avoidRiverBank)
+        {
+            return jitter;
+        }
+
+        var region = context.SampleTerrainRegion(coord);
+        float score = region switch
+        {
+            TerrainRegionKind.ForestCore => 1.0f,
+            TerrainRegionKind.ForestEdge => 0.74f,
+            TerrainRegionKind.OpenLowland => 0.38f,
+            TerrainRegionKind.RiverBank => 0.18f,
+            TerrainRegionKind.MountainCore => -100f,
+            TerrainRegionKind.RiverChannel => -100f,
+            TerrainRegionKind.MudFlat => 0.22f,
+            TerrainRegionKind.MountainFoot => 0.46f,
+            _ => 0.30f
+        };
+
+        if (preferForestCore)
+        {
+            score += region == TerrainRegionKind.ForestCore ? 0.45f : -0.10f;
+        }
+
+        if (preferForestEdge)
+        {
+            score += region == TerrainRegionKind.ForestEdge ? 0.32f : -0.05f;
+        }
+
+        if (avoidRiverBank && region == TerrainRegionKind.RiverBank)
+        {
+            score -= 0.8f;
+        }
+
+        return score + (jitter * 0.15f);
     }
 
     private static int DistanceSquared(LocalTileCoord a, LocalTileCoord b)

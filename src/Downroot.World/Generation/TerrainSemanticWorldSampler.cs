@@ -1,5 +1,4 @@
 using Downroot.Core.World;
-using Downroot.World.Generation.Passes;
 
 namespace Downroot.World.Generation;
 
@@ -35,11 +34,12 @@ public static class TerrainSemanticWorldSampler
             return SurfaceSemanticDefaults.CreateForRegion(worldSpaceKind, SurfaceRegionSampler.SampleSurfaceRegion(worldSpaceKind, worldSeed, worldTile));
         }
 
-        var fields = SampleFields(worldSpaceKind, worldSeed, worldTile);
-        var visual = SampleLegalizedVisual(worldSpaceKind, worldSeed, worldTile, fields);
+        var fields = SampleMacroFields(worldSpaceKind, worldSeed, worldTile);
+        var region = SampleRegion(worldSpaceKind, worldSeed, worldTile, fields);
+        var visual = SampleLegalizedVisual(worldSpaceKind, worldSeed, worldTile, fields, region);
         var neighborVisuals = SampleLegalizedNeighborVisuals(worldSpaceKind, worldSeed, worldTile);
-        var height = ResolveHeight(visual, neighborVisuals, fields.Roughness);
-        var shoreProfile = ResolveShoreProfile(visual, neighborVisuals);
+        var height = ResolveHeight(visual, neighborVisuals, fields, region);
+        var shoreProfile = ResolveShoreProfile(visual, neighborVisuals, region);
         return CreateSemantic(visual, height, shoreProfile);
     }
 
@@ -66,16 +66,39 @@ public static class TerrainSemanticWorldSampler
         };
     }
 
+    private static TerrainMacroFields SampleMacroFields(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
+        => TerrainMacroFieldSampler.Sample(worldSpaceKind, worldSeed, worldTile);
+
+    private static TerrainRegionSample SampleRegion(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields)
+        => TerrainRegionClassifier.Sample(worldSpaceKind, worldSeed, worldTile, fields);
+
     private static TerrainVisualKind SampleLegalizedVisual(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
     {
-        return SampleLegalizedVisual(worldSpaceKind, worldSeed, worldTile, SampleFields(worldSpaceKind, worldSeed, worldTile));
+        var fields = SampleMacroFields(worldSpaceKind, worldSeed, worldTile);
+        var region = SampleRegion(worldSpaceKind, worldSeed, worldTile, fields);
+        return SampleLegalizedVisual(worldSpaceKind, worldSeed, worldTile, fields, region);
     }
 
-    private static TerrainVisualKind SampleLegalizedVisual(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, TerrainFields fields)
+    private static TerrainVisualKind SampleLegalizedVisual(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields,
+        TerrainRegionSample region)
     {
-        var visual = SampleRawVisual(worldSpaceKind, worldSeed, worldTile, fields);
+        var visual = SampleRawVisualFromRegion(worldSpaceKind, worldSeed, worldTile, fields, region);
         var neighbors = AllNeighbors
-            .Select(offset => SampleRawVisual(worldSpaceKind, worldSeed, new WorldTileCoord(worldTile.X + offset.X, worldTile.Y + offset.Y)))
+            .Select(offset =>
+            {
+                var neighborTile = new WorldTileCoord(worldTile.X + offset.X, worldTile.Y + offset.Y);
+                var neighborFields = SampleMacroFields(worldSpaceKind, worldSeed, neighborTile);
+                var neighborRegion = SampleRegion(worldSpaceKind, worldSeed, neighborTile, neighborFields);
+                return SampleRawVisualFromRegion(worldSpaceKind, worldSeed, neighborTile, neighborFields, neighborRegion);
+            })
             .ToArray();
 
         if (visual == TerrainVisualKind.DeepWater && neighbors.Contains(TerrainVisualKind.Beach))
@@ -97,15 +120,11 @@ public static class TerrainSemanticWorldSampler
         }
 
         if (visual == TerrainVisualKind.Dirt
-            && fields.RiverDistance <= 1.9f
-            && !neighbors.Contains(TerrainVisualKind.Mountain))
+            && region.Region == TerrainRegionKind.RiverBank
+            && !region.IsSteepBankCandidate
+            && neighbors.Count(neighbor => neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater) >= 2)
         {
-            var shorelineNeighborCount = neighbors.Count(neighbor =>
-                neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater or TerrainVisualKind.Beach);
-            if (shorelineNeighborCount >= 2)
-            {
-                return TerrainVisualKind.Beach;
-            }
+            return TerrainVisualKind.Beach;
         }
 
         return visual;
@@ -123,54 +142,101 @@ public static class TerrainSemanticWorldSampler
         return neighbors;
     }
 
-    private static TerrainVisualKind SampleRawVisual(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
+    private static TerrainVisualKind SampleRawVisualFromRegion(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields,
+        TerrainRegionSample region)
     {
-        return SampleRawVisual(worldSpaceKind, worldSeed, worldTile, SampleFields(worldSpaceKind, worldSeed, worldTile));
+        return region.Region switch
+        {
+            TerrainRegionKind.RiverChannel => region.RiverDistanceNormalized <= 0.45f
+                ? TerrainVisualKind.DeepWater
+                : TerrainVisualKind.ShallowWater,
+            TerrainRegionKind.RiverBank => SampleRiverBankVisual(worldSpaceKind, worldSeed, worldTile, fields, region),
+            TerrainRegionKind.MountainCore => TerrainVisualKind.Mountain,
+            TerrainRegionKind.MountainFoot => fields.MoistureMacro >= 0.58f && fields.ForestMass >= 0.48f
+                ? TerrainVisualKind.Grass
+                : TerrainVisualKind.Dirt,
+            TerrainRegionKind.ForestCore => TerrainVisualKind.Grass,
+            TerrainRegionKind.ForestEdge => SampleForestEdgeVisual(worldSpaceKind, worldSeed, worldTile, fields),
+            TerrainRegionKind.MudFlat => TerrainVisualKind.Dirt,
+            _ => SampleOpenLowlandVisual(worldSpaceKind, worldSeed, worldTile, fields)
+        };
     }
 
-    private static TerrainVisualKind SampleRawVisual(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile, TerrainFields fields)
+    private static TerrainVisualKind SampleRiverBankVisual(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields,
+        TerrainRegionSample region)
     {
-        if (fields.RiverDistance <= 0.42f)
+        if (region.IsSteepBankCandidate)
         {
-            return TerrainVisualKind.DeepWater;
+            return TerrainVisualKind.Dirt;
         }
 
-        if (fields.RiverDistance <= 1f)
+        if (fields.MoistureMacro >= 0.62f && fields.ForestMass >= 0.57f)
         {
-            return TerrainVisualKind.ShallowWater;
+            return TerrainVisualKind.Grass;
         }
 
-        var mountainScore = (fields.Elevation * 0.7f) + (fields.Roughness * 0.3f);
-        if (mountainScore >= 0.72f && fields.Moisture <= 0.58f && fields.RiverDistance > 1.35f)
-        {
-            return TerrainVisualKind.Mountain;
-        }
+        return TerrainVisualKind.Beach;
+    }
 
-        var shorelineBand = fields.RiverDistance <= 1.75f;
-        var beachScore = ((1f - fields.Moisture) * 0.45f) + ((1f - fields.GrassPotential) * 0.35f) + (fields.CoastalExposure * 0.20f);
-        if (shorelineBand && beachScore >= 0.50f)
-        {
-            return TerrainVisualKind.Beach;
-        }
-
-        return fields.GrassPotential >= 0.56f
+    private static TerrainVisualKind SampleForestEdgeVisual(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields)
+    {
+        var blend = StableWorldNoise.SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * 0.071f, worldTile.Y * 0.071f, 4103);
+        return blend + (fields.MoistureMacro * 0.25f) >= 0.62f
             ? TerrainVisualKind.Grass
             : TerrainVisualKind.Dirt;
     }
 
-    private static HeightKind ResolveHeight(TerrainVisualKind visual, IReadOnlyList<TerrainVisualKind> neighborVisuals, float roughness)
+    private static TerrainVisualKind SampleOpenLowlandVisual(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile,
+        TerrainMacroFields fields)
+    {
+        var blend = (fields.MoistureMacro * 0.55f) + ((1f - fields.OpenFieldBias) * 0.25f) + (fields.ForestMass * 0.20f);
+        var localVariation = StableWorldNoise.SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * 0.082f, worldTile.Y * 0.082f, 4201);
+        return blend + (localVariation * 0.12f) >= 0.56f
+            ? TerrainVisualKind.Grass
+            : TerrainVisualKind.Dirt;
+    }
+
+    private static HeightKind ResolveHeight(
+        TerrainVisualKind visual,
+        IReadOnlyList<TerrainVisualKind> neighborVisuals,
+        TerrainMacroFields fields,
+        TerrainRegionSample region)
     {
         if (visual == TerrainVisualKind.Mountain)
         {
-            return neighborVisuals.Any(neighbor =>
-                TerrainVisualAdjacencyRules.GetAdjacencyRule(visual, neighbor) == AdjacencyRule.AllowedButSteep)
-                ? HeightKind.Cliff
-                : HeightKind.Raised;
+            if (neighborVisuals.Any(neighbor => neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater))
+            {
+                return HeightKind.Cliff;
+            }
+
+            if (neighborVisuals.Any(neighbor => neighbor != TerrainVisualKind.Mountain))
+            {
+                return fields.RidgeMacro >= 0.68f
+                    ? HeightKind.Cliff
+                    : HeightKind.Raised;
+            }
+
+            return HeightKind.Raised;
         }
 
         if (visual is TerrainVisualKind.Dirt or TerrainVisualKind.Grass
-            && neighborVisuals.Any(neighbor => neighbor == TerrainVisualKind.Mountain)
-            && roughness >= 0.82f)
+            && region.Region == TerrainRegionKind.MountainFoot
+            && neighborVisuals.Any(neighbor => neighbor == TerrainVisualKind.Mountain))
         {
             return HeightKind.Raised;
         }
@@ -178,26 +244,25 @@ public static class TerrainSemanticWorldSampler
         return HeightKind.Low;
     }
 
-    private static ShoreProfileKind ResolveShoreProfile(TerrainVisualKind visual, IReadOnlyList<TerrainVisualKind> neighborVisuals)
+    private static ShoreProfileKind ResolveShoreProfile(
+        TerrainVisualKind visual,
+        IReadOnlyList<TerrainVisualKind> neighborVisuals,
+        TerrainRegionSample region)
     {
-        if (visual == TerrainVisualKind.DeepWater || visual == TerrainVisualKind.ShallowWater)
+        if (visual is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater)
         {
             return ShoreProfileKind.None;
         }
 
-        if (neighborVisuals.Any(neighbor =>
-            TerrainVisualAdjacencyRules.GetAdjacencyRule(visual, neighbor) == AdjacencyRule.AllowedButSteep))
+        var hasWaterNeighbor = neighborVisuals.Any(neighbor => neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater);
+        if (!hasWaterNeighbor)
         {
-            return ShoreProfileKind.Steep;
+            return ShoreProfileKind.None;
         }
 
-        if (neighborVisuals.Any(neighbor =>
-            neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater or TerrainVisualKind.Beach))
-        {
-            return ShoreProfileKind.Gentle;
-        }
-
-        return ShoreProfileKind.None;
+        return region.IsSteepBankCandidate
+            ? ShoreProfileKind.Steep
+            : ShoreProfileKind.Gentle;
     }
 
     private static SurfaceTileSemantic CreateSemantic(TerrainVisualKind visual, HeightKind height, ShoreProfileKind shoreProfile)
@@ -213,99 +278,4 @@ public static class TerrainSemanticWorldSampler
             _ => new SurfaceTileSemantic(TerrainVisualKind.Dirt, SurfaceGameplayKind.Ground, HeightKind.Low, ShoreProfileKind.None, true, true, false)
         };
     }
-
-    private static TerrainFields SampleFields(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord worldTile)
-    {
-        var elevation = SampleLayeredValueNoise(worldSpaceKind, worldSeed, worldTile, 0.019f, 0.071f, 1303, 1379);
-        var roughness = SampleRidgeNoise(worldSpaceKind, worldSeed, worldTile, 0.053f, 0.132f, 1427, 1499);
-        var moisture = SampleLayeredValueNoise(worldSpaceKind, worldSeed, worldTile, 0.028f, 0.087f, 1543, 1607);
-        var grassPotential = (GrassRegionPass.SampleLayeredNoise(worldSpaceKind, worldSeed, worldTile) * 0.65f) + (moisture * 0.35f);
-        var coastalExposure = SampleLayeredValueNoise(worldSpaceKind, worldSeed, worldTile, 0.024f, 0.103f, 1663, 1721);
-        var riverDistance = RiverPass.SampleNearestNormalizedDistance(worldSpaceKind, worldSeed, worldTile);
-        return new TerrainFields(elevation, roughness, moisture, grassPotential, coastalExposure, riverDistance);
-    }
-
-    private static float SampleLayeredValueNoise(
-        WorldSpaceKind worldSpaceKind,
-        int worldSeed,
-        WorldTileCoord worldTile,
-        float lowFrequency,
-        float highFrequency,
-        int lowSalt,
-        int highSalt)
-    {
-        var low = SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * lowFrequency, worldTile.Y * lowFrequency, lowSalt);
-        var high = SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * highFrequency, worldTile.Y * highFrequency, highSalt);
-        return (low * 0.7f) + (high * 0.3f);
-    }
-
-    private static float SampleRidgeNoise(
-        WorldSpaceKind worldSpaceKind,
-        int worldSeed,
-        WorldTileCoord worldTile,
-        float lowFrequency,
-        float highFrequency,
-        int lowSalt,
-        int highSalt)
-    {
-        var low = 1f - MathF.Abs((SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * lowFrequency, worldTile.Y * lowFrequency, lowSalt) * 2f) - 1f);
-        var high = 1f - MathF.Abs((SampleValueNoise(worldSpaceKind, worldSeed, worldTile.X * highFrequency, worldTile.Y * highFrequency, highSalt) * 2f) - 1f);
-        return (low * 0.6f) + (high * 0.4f);
-    }
-
-    private static float SampleValueNoise(WorldSpaceKind worldSpaceKind, int worldSeed, float x, float y, int salt)
-    {
-        var x0 = (int)MathF.Floor(x);
-        var y0 = (int)MathF.Floor(y);
-        var x1 = x0 + 1;
-        var y1 = y0 + 1;
-
-        var tx = SmoothStep(x - x0);
-        var ty = SmoothStep(y - y0);
-
-        var v00 = HashToUnitFloat(worldSpaceKind, worldSeed, x0, y0, salt);
-        var v10 = HashToUnitFloat(worldSpaceKind, worldSeed, x1, y0, salt);
-        var v01 = HashToUnitFloat(worldSpaceKind, worldSeed, x0, y1, salt);
-        var v11 = HashToUnitFloat(worldSpaceKind, worldSeed, x1, y1, salt);
-
-        var top = Lerp(v00, v10, tx);
-        var bottom = Lerp(v01, v11, tx);
-        return Lerp(top, bottom, ty);
-    }
-
-    private static float HashToUnitFloat(WorldSpaceKind worldSpaceKind, int worldSeed, int x, int y, int salt)
-    {
-        return GetStableHash(worldSpaceKind, worldSeed, new WorldTileCoord(x, y), salt) / (float)int.MaxValue;
-    }
-
-    private static int GetStableHash(WorldSpaceKind worldSpaceKind, int worldSeed, WorldTileCoord coord, int salt)
-    {
-        unchecked
-        {
-            var hash = 17;
-            hash = (hash * 31) + (int)worldSpaceKind;
-            hash = (hash * 31) + worldSeed;
-            hash = (hash * 31) + coord.X;
-            hash = (hash * 31) + coord.Y;
-            hash = (hash * 31) + salt;
-            hash ^= hash >> 16;
-            hash *= unchecked((int)0x7feb352d);
-            hash ^= hash >> 15;
-            hash *= unchecked((int)0x846ca68b);
-            hash ^= hash >> 16;
-            return hash & int.MaxValue;
-        }
-    }
-
-    private static float SmoothStep(float value) => value * value * (3f - 2f * value);
-
-    private static float Lerp(float a, float b, float t) => a + ((b - a) * t);
-
-    private readonly record struct TerrainFields(
-        float Elevation,
-        float Roughness,
-        float Moisture,
-        float GrassPotential,
-        float CoastalExposure,
-        float RiverDistance);
 }

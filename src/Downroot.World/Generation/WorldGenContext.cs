@@ -82,6 +82,13 @@ public sealed class WorldGenContext(
 
     public void SetSurfaceRegion(LocalTileCoord coord, string regionKey) => surface.SetSurfaceRegion(coord.X, coord.Y, regionKey);
 
+    public TerrainRegionKind SampleTerrainRegion(LocalTileCoord coord)
+    {
+        var worldTile = GetWorldTileCoord(coord);
+        var fields = TerrainMacroFieldSampler.Sample(_worldSpaceKind, _worldSeed, worldTile);
+        return TerrainRegionClassifier.Sample(_worldSpaceKind, _worldSeed, worldTile, fields).Region;
+    }
+
     public bool IsSpawnOccupied(LocalTileCoord coord)
     {
         var worldTile = GetWorldTileCoord(coord);

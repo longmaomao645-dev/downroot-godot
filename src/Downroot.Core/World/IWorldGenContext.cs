@@ -27,6 +27,7 @@ public interface IWorldGenContext
     string GetSurfaceRegion(LocalTileCoord coord);
     bool HasSurfaceRegion(LocalTileCoord coord, string regionKey);
     void SetSurfaceRegion(LocalTileCoord coord, string regionKey);
+    TerrainRegionKind SampleTerrainRegion(LocalTileCoord coord);
     bool IsSpawnOccupied(LocalTileCoord coord);
     void AddSpawn(LocalTileCoord coord, ContentId contentId);
 }

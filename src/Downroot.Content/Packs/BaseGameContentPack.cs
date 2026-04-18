@@ -334,47 +334,105 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-goldvein"), WorldGenPassTypes.RaisedOreField, goldveinRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-venomite"), WorldGenPassTypes.RaisedOreField, venomiteRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-rock-outcrop"), WorldGenPassTypes.RockOutcrop, rockOutcropNodeId, WorldSpaceKind.Overworld));
-        var treePasses = new (string PassId, ContentId TreeId, int Count, int MinSpacing)[]
+        var temperateForestTreeIds = new[]
         {
-            ("basegame:spawn-tree-bright", treeNodeIds[0], 3, 4),
-            ("basegame:spawn-tree-lush", treeNodeIds[1], 2, 4),
-            ("basegame:spawn-tree-round", treeNodeIds[2], 2, 4),
-            ("basegame:spawn-tree-round-bush", treeNodeIds[3], 2, 4),
-            ("basegame:spawn-tree-light-trunk", treeNodeIds[4], 2, 4),
-            ("basegame:spawn-tree-dark-pine", treeNodeIds[5], 1, 5),
-            ("basegame:spawn-tree-blossom", treeNodeIds[6], 1, 5),
-            ("basegame:spawn-tree-autumn", treeNodeIds[7], 1, 5),
-            ("basegame:spawn-tree-dead-brown", treeNodeIds[8], 1, 5),
-            ("basegame:spawn-tree-dead-black", treeNodeIds[9], 1, 5),
-            ("basegame:spawn-tree-young-green-split", treeNodeIds[10], 2, 4),
-            ("basegame:spawn-tree-green-split", treeNodeIds[11], 2, 4),
-            ("basegame:spawn-tree-large-green-split", treeNodeIds[12], 1, 6),
-            ("basegame:spawn-tree-small-pine-split", treeNodeIds[13], 2, 4),
-            ("basegame:spawn-tree-pine-split", treeNodeIds[14], 2, 5),
-            ("basegame:spawn-tree-large-pine-split", treeNodeIds[15], 1, 6),
-            ("basegame:spawn-tree-small-snow-pine-split", treeNodeIds[16], 1, 5),
-            ("basegame:spawn-tree-snow-pine-split", treeNodeIds[17], 1, 5),
-            ("basegame:spawn-tree-large-snow-pine-split", treeNodeIds[18], 1, 6)
+            treeNodeIds[0],
+            treeNodeIds[1],
+            treeNodeIds[2],
+            treeNodeIds[4],
+            treeNodeIds[6],
+            treeNodeIds[7],
+            treeNodeIds[10],
+            treeNodeIds[11],
+            treeNodeIds[12]
         };
-        foreach (var treePass in treePasses)
+        var coniferForestTreeIds = new[]
+        {
+            treeNodeIds[5],
+            treeNodeIds[13],
+            treeNodeIds[14],
+            treeNodeIds[15],
+            treeNodeIds[16],
+            treeNodeIds[17],
+            treeNodeIds[18]
+        };
+        var sparseEdgeTreeIds = new[]
+        {
+            treeNodeIds[3],
+            treeNodeIds[8],
+            treeNodeIds[9]
+        };
+
+        RegisterTreePasses(
+            registrar,
+            "basegame:forest-core-tree",
+            temperateForestTreeIds,
+            count: 2,
+            minSpacing: 4,
+            requiredTerrainRegion: TerrainRegionKind.ForestCore,
+            preferForestCore: true,
+            avoidRiverBank: true);
+        RegisterTreePasses(
+            registrar,
+            "basegame:forest-conifer-tree",
+            coniferForestTreeIds,
+            count: 1,
+            minSpacing: 5,
+            requiredTerrainRegion: TerrainRegionKind.MountainFoot,
+            avoidRiverBank: true);
+        RegisterTreePasses(
+            registrar,
+            "basegame:forest-edge-tree",
+            sparseEdgeTreeIds,
+            count: 1,
+            minSpacing: 5,
+            requiredTerrainRegion: TerrainRegionKind.ForestEdge,
+            preferForestEdge: true,
+            avoidRiverBank: true);
+        RegisterTreePasses(
+            registrar,
+            "basegame:open-sparse-tree",
+            sparseEdgeTreeIds,
+            count: 1,
+            minSpacing: 6,
+            requiredTerrainRegion: TerrainRegionKind.OpenLowland,
+            avoidRiverBank: true);
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.ScatterSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 8, 0, 0, 28, 18, SurfaceRegions.GrassField, 2, RequireSupportsTrees: true));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-cockroaches"), WorldGenPassTypes.ScatterSpawn, cockroachId, WorldSpaceKind.Overworld, 4, 0, 0, 28, 18, SurfaceRegions.GrassField, 5));
+    }
+
+    private static void RegisterTreePasses(
+        IContentRegistrar registrar,
+        string passPrefix,
+        IReadOnlyList<ContentId> treeIds,
+        int count,
+        int minSpacing,
+        TerrainRegionKind? requiredTerrainRegion = null,
+        bool preferForestCore = false,
+        bool preferForestEdge = false,
+        bool avoidRiverBank = false)
+    {
+        for (var index = 0; index < treeIds.Count; index++)
         {
             registrar.RegisterWorldGenPass(new WorldGenPassDef(
-                new ContentId(treePass.PassId),
+                new ContentId($"{passPrefix}-{index}"),
                 WorldGenPassTypes.ScatterSpawn,
-                treePass.TreeId,
+                treeIds[index],
                 WorldSpaceKind.Overworld,
-                treePass.Count,
+                count,
                 0,
                 0,
                 28,
                 18,
                 SurfaceRegions.GrassField,
-                treePass.MinSpacing,
-                RequireSupportsTrees: true));
+                minSpacing,
+                RequireSupportsTrees: true,
+                RequiredTerrainRegion: requiredTerrainRegion,
+                PreferForestCore: preferForestCore,
+                PreferForestEdge: preferForestEdge,
+                AvoidRiverBank: avoidRiverBank));
         }
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.ScatterSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 8, 0, 0, 28, 18, SurfaceRegions.GrassField, 2, RequireSupportsTrees: true));
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-cockroaches"), WorldGenPassTypes.ScatterSpawn, cockroachId, WorldSpaceKind.Overworld, 4, 0, 0, 28, 18, SurfaceRegions.GrassField, 5));
     }
 }

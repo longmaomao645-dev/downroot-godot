@@ -28,7 +28,11 @@ public static class WorldGenPassFactory
                 definition.PrimarySurfaceRegion,
                 definition.MinSpacing,
                 definition.RequireBuildable,
-                definition.RequireSupportsTrees),
+                definition.RequireSupportsTrees,
+                definition.RequiredTerrainRegion,
+                definition.PreferForestCore,
+                definition.PreferForestEdge,
+                definition.AvoidRiverBank),
             _ => throw new InvalidOperationException($"Unknown world gen pass type '{definition.PassType}' for '{definition.Id}'.")
         };
     }
