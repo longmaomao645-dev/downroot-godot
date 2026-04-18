@@ -281,9 +281,23 @@ public static class TerrainSemanticWorldSampler
 
     private static SurfaceTileSemantic CreateSemantic(TerrainVisualKind visual, HeightKind height, ShoreProfileKind shoreProfile)
     {
-        var supportsTrees = visual == TerrainVisualKind.Grass
-            || (visual == TerrainVisualKind.Dirt && height == HeightKind.Raised)
-            || (visual == TerrainVisualKind.Dirt && shoreProfile == ShoreProfileKind.None);
+        var supportsTrees = visual switch
+        {
+            TerrainVisualKind.Grass => true,
+            TerrainVisualKind.Dirt => shoreProfile switch
+            {
+                ShoreProfileKind.Gentle => false,
+                ShoreProfileKind.Steep => false,
+                ShoreProfileKind.None when height == HeightKind.Raised => true,
+                ShoreProfileKind.None => true,
+                _ => false
+            },
+            TerrainVisualKind.Beach => false,
+            TerrainVisualKind.ShallowWater => false,
+            TerrainVisualKind.DeepWater => false,
+            TerrainVisualKind.Mountain => false,
+            _ => false
+        };
 
         return visual switch
         {
