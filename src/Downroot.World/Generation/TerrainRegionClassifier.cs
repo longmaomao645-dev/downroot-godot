@@ -22,12 +22,12 @@ public static class TerrainRegionClassifier
         var forestScore = ComputeForestScore(fields);
         var openScore = ComputeOpenScore(fields);
         var bankSharpness = ComputeBankSharpness(fields, riverChannelScore, riverBankScore, mountainCoreScore, mountainFootScore);
-        var forestCoreThreshold = 0.47f + (openScore * 0.10f) + (Math.Clamp(1.00f - fields.RiverBase, 0f, 1f) * 0.04f);
-        var forestEdgeThreshold = 0.32f + (openScore * 0.06f);
+        var forestCoreThreshold = 0.43f + (openScore * 0.08f) + (Math.Clamp(1.02f - fields.RiverBase, 0f, 1f) * 0.03f);
+        var forestEdgeThreshold = 0.40f + (openScore * 0.16f) + (Math.Clamp(1.04f - fields.RiverBase, 0f, 1f) * 0.04f);
         var mountainFootThreshold = 0.52f + (fields.MoistureMacro * 0.04f);
         var supportsForestCore = forestScore >= forestCoreThreshold
-            && openScore <= 0.72f
-            && fields.RiverBase >= 1.00f;
+            && openScore <= 0.68f
+            && fields.RiverBase >= 0.98f;
         var supportsMountainFoot = mountainFootScore >= mountainFootThreshold
             && fields.RidgeMacro >= 0.34f
             && fields.RiverBase >= 0.98f;
@@ -35,6 +35,9 @@ public static class TerrainRegionClassifier
             && fields.RiverBase <= 1.30f
             && !supportsForestCore
             && mountainFootScore < mountainFootThreshold + 0.08f;
+        var supportsForestEdge = forestScore >= forestEdgeThreshold
+            && openScore <= 0.72f
+            && fields.RiverBase >= 0.96f;
 
         var region =
             fields.RiverBase <= 0.90f ? TerrainRegionKind.RiverChannel :
@@ -43,7 +46,7 @@ public static class TerrainRegionClassifier
             supportsForestCore ? TerrainRegionKind.ForestCore :
             supportsMountainFoot ? TerrainRegionKind.MountainFoot :
             supportsRiverBank ? TerrainRegionKind.RiverBank :
-            forestScore >= forestEdgeThreshold && openScore < 0.84f ? TerrainRegionKind.ForestEdge :
+            supportsForestEdge ? TerrainRegionKind.ForestEdge :
             fields.MoistureMacro <= 0.34f && fields.RiverBase <= 1.75f && openScore >= 0.47f ? TerrainRegionKind.MudFlat :
             TerrainRegionKind.OpenLowland;
 
