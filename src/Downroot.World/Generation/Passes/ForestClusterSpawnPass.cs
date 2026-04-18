@@ -19,7 +19,7 @@ public sealed class ForestClusterSpawnPass(
     float candidateDensity,
     int? maxCountOverride) : IWorldGenPass
 {
-    private const int PatchRadius = 4;
+    private const int PatchRadius = 5;
 
     public string Name => WorldGenPassTypes.ForestClusterSpawn;
 
@@ -190,12 +190,15 @@ public sealed class ForestClusterSpawnPass(
             {
                 TerrainRegionKind.ForestCore => 0.95f,
                 TerrainRegionKind.ForestEdge => 0.58f,
+                TerrainRegionKind.OpenLowland => 0.22f,
                 _ => -100f
             },
             TreeBiomeKind.ConiferMountainFoot => region switch
             {
                 TerrainRegionKind.MountainFoot => 0.92f,
+                TerrainRegionKind.ForestEdge => 0.56f,
                 TerrainRegionKind.ForestCore => 0.54f,
+                TerrainRegionKind.OpenLowland => 0.20f,
                 _ => -100f
             },
             TreeBiomeKind.SparseForestEdge => region switch
@@ -257,7 +260,7 @@ public sealed class ForestClusterSpawnPass(
                 break;
             }
 
-            if (centers.Any(existing => DistanceSquared(existing.Coord, candidate.Coord) < 20))
+            if (centers.Any(existing => DistanceSquared(existing.Coord, candidate.Coord) < 12))
             {
                 continue;
             }
@@ -338,7 +341,7 @@ public sealed class ForestClusterSpawnPass(
                 continue;
             }
 
-            if (GetBiomeOwnershipScore(candidateBiome, region, fields, density) > targetScore + 0.18f)
+            if (GetBiomeOwnershipScore(candidateBiome, region, fields, density) > targetScore + 0.32f)
             {
                 return false;
             }
@@ -409,7 +412,7 @@ public sealed class ForestClusterSpawnPass(
         var desired = (int)MathF.Ceiling(viableCandidateCount * candidateDensity);
         if (biome != TreeBiomeKind.OpenLowlandSparse)
         {
-            desired = Math.Max(desired, Math.Min(6, viableCandidateCount));
+            desired = Math.Max(desired, Math.Min(10, viableCandidateCount));
         }
 
         if (maxCountOverride.HasValue)
@@ -420,7 +423,7 @@ public sealed class ForestClusterSpawnPass(
         return Math.Clamp(desired, 0, viableCandidateCount);
     }
 
-    private static float GetMinimumAcceptedScore() => 0.34f;
+    private static float GetMinimumAcceptedScore() => 0.26f;
 
     private static int DistanceSquared(LocalTileCoord a, LocalTileCoord b)
     {

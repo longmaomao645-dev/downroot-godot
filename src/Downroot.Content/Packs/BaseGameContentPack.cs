@@ -382,8 +382,8 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 2,
             requiredTerrainRegion: TerrainRegionKind.ForestCore,
             avoidRiverBank: true,
-            candidateDensity: 0.56f,
-            maxCountOverride: 24);
+            candidateDensity: 0.64f,
+            maxCountOverride: 32);
         RegisterTreeClusterPass(
             registrar,
             "basegame:spawn-conifer-mountain-foot",
@@ -393,8 +393,8 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 2,
             requiredTerrainRegion: TerrainRegionKind.MountainFoot,
             avoidRiverBank: true,
-            candidateDensity: 0.48f,
-            maxCountOverride: 18);
+            candidateDensity: 0.56f,
+            maxCountOverride: 24);
         RegisterTreeClusterPass(
             registrar,
             "basegame:spawn-sparse-forest-edge",
@@ -404,8 +404,8 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 3,
             requiredTerrainRegion: TerrainRegionKind.ForestEdge,
             avoidRiverBank: true,
-            candidateDensity: 0.32f,
-            maxCountOverride: 12);
+            candidateDensity: 0.38f,
+            maxCountOverride: 16);
         RegisterTreeClusterPass(
             registrar,
             "basegame:spawn-open-sparse-trees",
@@ -415,8 +415,8 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 4,
             requiredTerrainRegion: TerrainRegionKind.OpenLowland,
             avoidRiverBank: true,
-            candidateDensity: 0.18f,
-            maxCountOverride: 8);
+            candidateDensity: 0.22f,
+            maxCountOverride: 10);
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.BerryPatchSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 2, 0, 0, 28, 18, null, 1, false, true, MaxCountOverride: 10));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
