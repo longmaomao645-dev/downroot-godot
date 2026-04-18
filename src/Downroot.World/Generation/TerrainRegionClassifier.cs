@@ -4,6 +4,18 @@ namespace Downroot.World.Generation;
 
 public static class TerrainRegionClassifier
 {
+    private static readonly WorldTileCoord[] ForestEdgeNeighborOffsets =
+    [
+        new WorldTileCoord(-6, 0),
+        new WorldTileCoord(6, 0),
+        new WorldTileCoord(0, -6),
+        new WorldTileCoord(0, 6),
+        new WorldTileCoord(-4, -4),
+        new WorldTileCoord(4, -4),
+        new WorldTileCoord(-4, 4),
+        new WorldTileCoord(4, 4)
+    ];
+
     public static TerrainRegionSample Sample(
         WorldSpaceKind worldSpaceKind,
         int worldSeed,
@@ -35,11 +47,15 @@ public static class TerrainRegionClassifier
             && !supportsForestCore
             && mountainFootScore < mountainFootThreshold + 0.08f;
         var forestTransitionScore = ComputeForestTransitionScore(fields, forestScore, openScore, forestCoreThreshold);
-        var supportsForestEdge = forestTransitionScore >= 0.54f
+        var hasNearbyForestCore = HasNearbyForestCorePotential(worldSpaceKind, worldSeed, worldTile);
+        var supportsForestEdge = hasNearbyForestCore
+            && forestTransitionScore >= 0.50f
             && forestScore >= 0.34f
             && !supportsForestCore
             && !supportsMountainFoot
-            && fields.RiverBase >= 0.94f;
+            && !supportsRiverBank
+            && fields.RiverBase >= 0.94f
+            && openScore <= 0.74f;
 
         var region =
             fields.RiverBase <= 0.90f ? TerrainRegionKind.RiverChannel :
@@ -122,6 +138,40 @@ public static class TerrainRegionClassifier
             + (fields.ForestMass * 0.14f)
             + (fields.MoistureMacro * 0.10f)
             - (riverPenalty * 0.18f);
+    }
+
+    private static bool HasNearbyForestCorePotential(
+        WorldSpaceKind worldSpaceKind,
+        int worldSeed,
+        WorldTileCoord worldTile)
+    {
+        var qualifyingNeighbors = 0;
+        foreach (var offset in ForestEdgeNeighborOffsets)
+        {
+            var neighborTile = new WorldTileCoord(worldTile.X + offset.X, worldTile.Y + offset.Y);
+            var neighborFields = TerrainMacroFieldSampler.Sample(worldSpaceKind, worldSeed, neighborTile);
+            if (neighborFields.RiverBase < 0.98f)
+            {
+                continue;
+            }
+
+            var neighborOpenScore = ComputeOpenScore(neighborFields);
+            var neighborForestScore = ComputeForestScore(neighborFields);
+            var neighborForestCoreThreshold = 0.43f
+                + (neighborOpenScore * 0.08f)
+                + (Math.Clamp(1.02f - neighborFields.RiverBase, 0f, 1f) * 0.03f);
+
+            if (neighborForestScore >= neighborForestCoreThreshold && neighborOpenScore <= 0.68f)
+            {
+                qualifyingNeighbors++;
+                if (qualifyingNeighbors >= 2)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static float ComputeBankSharpness(
