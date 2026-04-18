@@ -3,7 +3,7 @@
 These files are Python-generated pixel-art drafts for reviewing missing Phase 2 assets.
 
 The raw-size runtime assets have already been moved into the gameplay-facing asset folders.
-This `_inbox` folder now keeps only preview artifacts and the generation reference.
+This archived preview folder keeps only review artifacts and the generation reference.
 
 Runtime asset destinations:
 

@@ -912,11 +912,22 @@ public sealed partial class WorldRenderer : Node2D
 
         return new EntityVisualState(
             texture,
-            ToGodot(entity.Position),
+            ResolveEntitySpritePosition(entity, runtime),
             entity.Kind == WorldEntityKind.Creature && entity.Position.X > runtime.Player.Position.X,
             ResolveEntityModulate(entity),
             ResolveZIndex(entity),
             entity.OpenState);
+    }
+
+    private Vector2 ResolveEntitySpritePosition(WorldEntityState entity, GameRuntime runtime)
+    {
+        if (entity.Kind == WorldEntityKind.ResourceNode)
+        {
+            var resourceDef = runtime.Content.ResourceNodes.Get(entity.DefinitionId);
+            return ToGodot(new NumericsVector2(entity.Position.X, entity.Position.Y + TileSize - resourceDef.SpriteHeight));
+        }
+
+        return ToGodot(entity.Position);
     }
 
     private static bool IsDynamicEntity(WorldEntityState entity)
@@ -1196,7 +1207,7 @@ public sealed partial class WorldRenderer : Node2D
     private float ResolveResourceBrightness(WorldEntityState entity)
     {
         var resourceDef = _runtime!.Content.ResourceNodes.Get(entity.DefinitionId);
-        var footWorld = new NumericsVector2(entity.Position.X + (resourceDef.SpriteWidth * 0.5f), entity.Position.Y + resourceDef.SpriteHeight - 4f);
+        var footWorld = new NumericsVector2(entity.Position.X + (resourceDef.SpriteWidth * 0.5f), entity.Position.Y + TileSize - 4f);
         return ResolveBiasedBrightness(_worldFacade!.GetWorldTile(footWorld), 0.10f);
     }
 
@@ -1310,8 +1321,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private float ResolveResourceSortY(WorldEntityState entity)
     {
-        var resourceDef = _runtime!.Content.ResourceNodes.Get(entity.DefinitionId);
-        return entity.Position.Y + (resourceDef.IsTree ? resourceDef.SpriteHeight * 0.75f : resourceDef.SpriteHeight);
+        return entity.Position.Y + TileSize;
     }
 
     private float ResolvePlaceableSortY(WorldEntityState entity)

@@ -72,7 +72,16 @@ public sealed class BaseGameContentPack : IContentPack
         var wormId = new ContentId("basegame:worm");
         var cockroachId = new ContentId("basegame:cockroach");
 
-        var treeNodeId = new ContentId("basegame:tree_bright");
+        var brightTreeNodeId = new ContentId("basegame:tree_bright");
+        var lushTreeNodeId = new ContentId("basegame:tree_lush");
+        var roundTreeNodeId = new ContentId("basegame:tree_round");
+        var roundBushTreeNodeId = new ContentId("basegame:tree_round_bush");
+        var lightTrunkTreeNodeId = new ContentId("basegame:tree_light_trunk");
+        var pineTreeNodeId = new ContentId("basegame:tree_dark_pine");
+        var blossomTreeNodeId = new ContentId("basegame:tree_pink_blossom");
+        var autumnTreeNodeId = new ContentId("basegame:tree_red_autumn");
+        var deadBrownTreeNodeId = new ContentId("basegame:tree_dead_brown");
+        var deadBlackTreeNodeId = new ContentId("basegame:tree_dead_black");
         var stoneNodeId = new ContentId("basegame:stone_node");
         var blueberryNodeId = new ContentId("basegame:blueberry_bush");
         var rockOutcropNodeId = new ContentId("basegame:rock_outcrop");
@@ -187,7 +196,16 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterItem(new ItemDef(roofPanelItemId, "Roof Panel", PackId, "packs/basegame/assets/world/terrain/floors/stone_floor.png", 32, 32, 16, roofPanelPlaceableId));
         registrar.RegisterItem(new ItemDef(workbenchUpgradeItemId, "Weapons Bench Upgrade", PackId, "packs/basegame/assets/items/resources/upgrade_workbench_weapons_bench.png", 16, 16, 4));
 
-        registrar.RegisterResourceNode(new ResourceNodeDef(treeNodeId, "Tree", PackId, "packs/basegame/assets/world/nature/trees/bright_green_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(brightTreeNodeId, "Bright Tree", PackId, "packs/basegame/assets/world/nature/trees/bright_green_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(lushTreeNodeId, "Lush Tree", PackId, "packs/basegame/assets/world/nature/trees/lush_green_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(roundTreeNodeId, "Round Tree", PackId, "packs/basegame/assets/world/nature/trees/round_green_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(roundBushTreeNodeId, "Round Bush Tree", PackId, "packs/basegame/assets/world/nature/trees/round_bush_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(lightTrunkTreeNodeId, "Light Trunk Tree", PackId, "packs/basegame/assets/world/nature/trees/light_trunk_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(pineTreeNodeId, "Dark Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/dark_pine_tree.png", 32, 32, 0, 0, 4, [new ItemAmount(logItemId, 4)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(blossomTreeNodeId, "Pink Blossom Tree", PackId, "packs/basegame/assets/world/nature/trees/pink_blossom_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(autumnTreeNodeId, "Red Autumn Tree", PackId, "packs/basegame/assets/world/nature/trees/red_autumn_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(deadBrownTreeNodeId, "Dead Brown Tree", PackId, "packs/basegame/assets/world/nature/trees/dead_brown_tree.png", 32, 32, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(deadBlackTreeNodeId, "Dead Black Tree", PackId, "packs/basegame/assets/world/nature/trees/dead_black_tree.png", 32, 32, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(stoneNodeId, "Stone Node", PackId, "packs/basegame/assets/world/nature/rocks/stone.png", 32, 32, 0, 0, 1, [new ItemAmount(stoneItemId, 1)], false, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(blueberryNodeId, "Blueberry Bush", PackId, "packs/basegame/assets/world/nature/plants/blueberry_bush.png", 16, 16, 0, 0, 1, [new ItemAmount(blueberryItemId, 1)], false, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(rockOutcropNodeId, "Rock Outcrop", PackId, "packs/basegame/assets/world/nature/rocks/rock_outcrop.png", 32, 32, 0, 0, 4, [new ItemAmount(stoneItemId, 2)], true));
@@ -221,7 +239,20 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterRecipe(new RecipeDef(new ContentId("basegame:smelt_venomite"), "Poison Crystal + Iron Ingot", PackId, [new ItemAmount(venomiteItemId, 1)], new ItemAmount(poisonCrystalItemId, 1), CraftingStationKind.Furnace, CraftDurationSeconds: 3.5f, ExtraResults: [new ItemAmount(ironIngotItemId, 1)]));
         registrar.RegisterRecipe(new RecipeDef(new ContentId("basegame:smelt_silicon_wafer"), "Silicon Wafer", PackId, [new ItemAmount(sandItemId, 8)], new ItemAmount(siliconWaferItemId, 1), CraftingStationKind.Furnace, CraftDurationSeconds: 5f));
 
-        RegisterOverworldPasses(registrar, dirtId, grassId, riverWaterId, rockOutcropNodeId, treeNodeId, blueberryNodeId, stoneNodeId, voiditeRaisedId, goldveinRaisedId, venomiteRaisedId, wormId, cockroachId);
+        RegisterOverworldPasses(
+            registrar,
+            dirtId,
+            grassId,
+            riverWaterId,
+            rockOutcropNodeId,
+            [brightTreeNodeId, lushTreeNodeId, roundTreeNodeId, roundBushTreeNodeId, lightTrunkTreeNodeId, pineTreeNodeId, blossomTreeNodeId, autumnTreeNodeId, deadBrownTreeNodeId, deadBlackTreeNodeId],
+            blueberryNodeId,
+            stoneNodeId,
+            voiditeRaisedId,
+            goldveinRaisedId,
+            venomiteRaisedId,
+            wormId,
+            cockroachId);
 
         registrar.SetBootstrapConfig(new GameBootstrapConfig(
             ChunkWidth: 28,
@@ -248,7 +279,7 @@ public sealed class BaseGameContentPack : IContentPack
         ContentId grassId,
         ContentId riverWaterId,
         ContentId rockOutcropNodeId,
-        ContentId treeNodeId,
+        IReadOnlyList<ContentId> treeNodeIds,
         ContentId blueberryNodeId,
         ContentId stoneNodeId,
         ContentId voiditeRaisedId,
@@ -265,7 +296,35 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-goldvein"), WorldGenPassTypes.RaisedOreField, goldveinRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:raised-venomite"), WorldGenPassTypes.RaisedOreField, venomiteRaisedId, WorldSpaceKind.Overworld));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:overworld-rock-outcrop"), WorldGenPassTypes.RockOutcrop, rockOutcropNodeId, WorldSpaceKind.Overworld));
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-trees"), WorldGenPassTypes.ScatterSpawn, treeNodeId, WorldSpaceKind.Overworld, 14, 0, 0, 28, 18, SurfaceRegions.GrassField, 3, RequireSupportsTrees: true));
+        var treePasses = new (string PassId, ContentId TreeId, int Count, int MinSpacing)[]
+        {
+            ("basegame:spawn-tree-bright", treeNodeIds[0], 3, 4),
+            ("basegame:spawn-tree-lush", treeNodeIds[1], 2, 4),
+            ("basegame:spawn-tree-round", treeNodeIds[2], 2, 4),
+            ("basegame:spawn-tree-round-bush", treeNodeIds[3], 2, 4),
+            ("basegame:spawn-tree-light-trunk", treeNodeIds[4], 2, 4),
+            ("basegame:spawn-tree-dark-pine", treeNodeIds[5], 1, 5),
+            ("basegame:spawn-tree-blossom", treeNodeIds[6], 1, 5),
+            ("basegame:spawn-tree-autumn", treeNodeIds[7], 1, 5),
+            ("basegame:spawn-tree-dead-brown", treeNodeIds[8], 1, 5),
+            ("basegame:spawn-tree-dead-black", treeNodeIds[9], 1, 5)
+        };
+        foreach (var treePass in treePasses)
+        {
+            registrar.RegisterWorldGenPass(new WorldGenPassDef(
+                new ContentId(treePass.PassId),
+                WorldGenPassTypes.ScatterSpawn,
+                treePass.TreeId,
+                WorldSpaceKind.Overworld,
+                treePass.Count,
+                0,
+                0,
+                28,
+                18,
+                SurfaceRegions.GrassField,
+                treePass.MinSpacing,
+                RequireSupportsTrees: true));
+        }
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.ScatterSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 8, 0, 0, 28, 18, SurfaceRegions.GrassField, 2, RequireSupportsTrees: true));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
