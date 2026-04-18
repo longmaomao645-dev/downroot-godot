@@ -29,5 +29,5 @@ public interface IWorldGenContext
     void SetSurfaceRegion(LocalTileCoord coord, string regionKey);
     TerrainRegionKind SampleTerrainRegion(LocalTileCoord coord);
     bool IsSpawnOccupied(LocalTileCoord coord);
-    void AddSpawn(LocalTileCoord coord, ContentId contentId);
+    void AddSpawn(LocalTileCoord coord, ContentId contentId, int pixelOffsetX = 0, int pixelOffsetY = 0);
 }

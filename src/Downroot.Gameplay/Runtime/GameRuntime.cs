@@ -68,4 +68,7 @@ public sealed class GameRuntime(
     public ChunkCoord GetChunkCoord(Vector2 worldPosition) => GetWorldTile(worldPosition).ToChunkCoord(ChunkWidth, ChunkHeight);
 
     public Vector2 GetWorldPosition(WorldTileCoord tileCoord) => new(tileCoord.X * 32f, tileCoord.Y * 32f);
+
+    public Vector2 GetWorldPosition(WorldSpawnDef spawn)
+        => new((spawn.Tile.X * 32f) + spawn.PixelOffsetX, (spawn.Tile.Y * 32f) + spawn.PixelOffsetY);
 }

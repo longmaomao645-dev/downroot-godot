@@ -132,7 +132,7 @@ public sealed class GameBootstrapper
                 chunk.AddNaturalEntity(new WorldEntityState(
                     WorldEntityKind.ResourceNode,
                     resourceDef!.Id,
-                    runtime.GetWorldPosition(spawn.Tile),
+                    runtime.GetWorldPosition(spawn),
                     resourceDef.MaxDurability,
                     generatedChunk.WorldSpaceKind,
                     generatedChunk.Coord,
@@ -146,7 +146,7 @@ public sealed class GameBootstrapper
                 chunk.AddNaturalEntity(new WorldEntityState(
                     WorldEntityKind.Creature,
                     creatureDef!.Id,
-                    runtime.GetWorldPosition(spawn.Tile),
+                    runtime.GetWorldPosition(spawn),
                     creatureDef.MaxHealth,
                     generatedChunk.WorldSpaceKind,
                     generatedChunk.Coord,
@@ -160,7 +160,7 @@ public sealed class GameBootstrapper
                 chunk.AddNaturalEntity(new WorldEntityState(
                     WorldEntityKind.Placeable,
                     placeableDef!.Id,
-                    runtime.GetWorldPosition(spawn.Tile),
+                    runtime.GetWorldPosition(spawn),
                     placeableDef.MaxDurability,
                     generatedChunk.WorldSpaceKind,
                     generatedChunk.Coord,

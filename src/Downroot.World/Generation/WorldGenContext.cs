@@ -95,13 +95,13 @@ public sealed class WorldGenContext(
         return spawns.Any(spawn => spawn.Tile == worldTile);
     }
 
-    public void AddSpawn(LocalTileCoord coord, ContentId contentId)
+    public void AddSpawn(LocalTileCoord coord, ContentId contentId, int pixelOffsetX = 0, int pixelOffsetY = 0)
     {
         if (IsSpawnOccupied(coord))
         {
             return;
         }
 
-        spawns.Add(new WorldSpawnDef(contentId, GetWorldTileCoord(coord)));
+        spawns.Add(new WorldSpawnDef(contentId, GetWorldTileCoord(coord), pixelOffsetX, pixelOffsetY));
     }
 }

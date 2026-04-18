@@ -18,6 +18,8 @@ public sealed class ForestClusterSpawnPass(
     float candidateDensity,
     int? maxCountOverride) : IWorldGenPass
 {
+    private const int PatchRadius = 3;
+
     public string Name => WorldGenPassTypes.ForestClusterSpawn;
 
     public void Execute(IWorldGenContext context)
@@ -89,36 +91,50 @@ public sealed class ForestClusterSpawnPass(
         }
 
         var desiredCount = ComputeDesiredCount(candidates.Count);
-        if (desiredCount <= 0)
+        if (desiredCount <= 0 || candidates.Count == 0)
+        {
+            return;
+        }
+
+        var centers = SelectPatchCenters(candidates, desiredCount);
+        if (centers.Count == 0)
         {
             return;
         }
 
         var chosen = new List<TreeSpawnCandidate>();
-        foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Score))
+        foreach (var center in centers)
         {
             if (chosen.Count >= desiredCount)
             {
                 break;
             }
 
-            if (context.IsSpawnOccupied(candidate.Coord))
+            foreach (var candidate in EnumeratePatchCandidates(context, center, candidates))
             {
-                continue;
-            }
+                if (chosen.Count >= desiredCount)
+                {
+                    break;
+                }
 
-            var candidateSpacing = GetEffectiveMinSpacing(candidate);
-            if (candidateSpacing > 0 && chosen.Any(existing =>
-            {
-                var existingSpacing = GetEffectiveMinSpacing(existing);
-                var requiredSpacing = Math.Max(1, (candidateSpacing + existingSpacing) / 2);
-                return DistanceSquared(existing.Coord, candidate.Coord) < requiredSpacing * requiredSpacing;
-            }))
-            {
-                continue;
-            }
+                if (context.IsSpawnOccupied(candidate.Coord))
+                {
+                    continue;
+                }
 
-            chosen.Add(candidate);
+                var candidateSpacing = GetEffectiveMinSpacing(candidate);
+                if (candidateSpacing > 0 && chosen.Any(existing =>
+                {
+                    var existingSpacing = GetEffectiveMinSpacing(existing);
+                    var requiredSpacing = Math.Max(1, (candidateSpacing + existingSpacing) / 2);
+                    return DistanceSquared(existing.Coord, candidate.Coord) < requiredSpacing * requiredSpacing;
+                }))
+                {
+                    continue;
+                }
+
+                chosen.Add(candidate);
+            }
         }
 
         foreach (var candidate in chosen)
@@ -126,7 +142,8 @@ public sealed class ForestClusterSpawnPass(
             var world = context.GetWorldTileCoord(candidate.Coord);
             var profile = TreeBiomeProfileSampler.Sample(context.WorldSpaceKind, context.WorldSeed, world, biome, speciesPoolIds.Count);
             var treeId = TreeSpeciesResolver.Resolve(biome, candidate.VariantRoll, profile, speciesPoolIds);
-            context.AddSpawn(candidate.Coord, treeId);
+            var offset = SampleSpawnOffset(context, candidate.Coord, treeId);
+            context.AddSpawn(candidate.Coord, treeId, offset.OffsetX, offset.OffsetY);
         }
     }
 
@@ -197,6 +214,67 @@ public sealed class ForestClusterSpawnPass(
         }
 
         return Math.Max(biome == TreeBiomeKind.OpenLowlandSparse ? 3 : 2, spacing);
+    }
+
+    private List<TreeSpawnCandidate> SelectPatchCenters(IReadOnlyList<TreeSpawnCandidate> candidates, int desiredCount)
+    {
+        var centerTarget = Math.Max(1, (int)MathF.Ceiling(desiredCount / (biome == TreeBiomeKind.OpenLowlandSparse ? 1.6f : 3.5f)));
+        var centers = new List<TreeSpawnCandidate>();
+        foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Score))
+        {
+            if (centers.Count >= centerTarget)
+            {
+                break;
+            }
+
+            if (centers.Any(existing => DistanceSquared(existing.Coord, candidate.Coord) < 36))
+            {
+                continue;
+            }
+
+            centers.Add(candidate);
+        }
+
+        return centers;
+    }
+
+    private IEnumerable<TreeSpawnCandidate> EnumeratePatchCandidates(
+        IWorldGenContext context,
+        TreeSpawnCandidate center,
+        IReadOnlyList<TreeSpawnCandidate> candidates)
+    {
+        var byCoord = candidates.ToDictionary(candidate => candidate.Coord);
+        var patchCandidates = new List<TreeSpawnCandidate>();
+        for (var dy = -PatchRadius; dy <= PatchRadius; dy++)
+        {
+            for (var dx = -PatchRadius; dx <= PatchRadius; dx++)
+            {
+                var x = center.Coord.X + dx;
+                var y = center.Coord.Y + dy;
+                if (x < 0 || y < 0 || x >= width || y >= height)
+                {
+                    continue;
+                }
+
+                var coord = new LocalTileCoord(x, y);
+                if (!byCoord.TryGetValue(coord, out var candidate))
+                {
+                    continue;
+                }
+
+                var distance = MathF.Sqrt((dx * dx) + (dy * dy));
+                if (distance > PatchRadius + 0.25f)
+                {
+                    continue;
+                }
+
+                var patchFactor = 1f - (distance / (PatchRadius + 0.5f));
+                var patchScore = candidate.Score + (patchFactor * 0.38f);
+                patchCandidates.Add(candidate with { Score = patchScore });
+            }
+        }
+
+        return patchCandidates.OrderByDescending(candidate => candidate.Score);
     }
 
     private bool OwnsBiome(IWorldGenContext context, WorldTileCoord world, TerrainRegionKind region, float density)
@@ -292,5 +370,14 @@ public sealed class ForestClusterSpawnPass(
         var dx = a.X - b.X;
         var dy = a.Y - b.Y;
         return (dx * dx) + (dy * dy);
+    }
+
+    private (int OffsetX, int OffsetY) SampleSpawnOffset(IWorldGenContext context, LocalTileCoord coord, ContentId treeId)
+    {
+        var world = context.GetWorldTileCoord(coord);
+        var salt = treeId.Value.GetHashCode();
+        var offsetX = (int)MathF.Round((context.GetStableUnitValue(world, salt + 17) - 0.5f) * 10f);
+        var offsetY = (int)MathF.Round((context.GetStableUnitValue(world, salt + 31) - 0.5f) * 8f);
+        return (offsetX, offsetY);
     }
 }
