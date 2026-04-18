@@ -260,7 +260,7 @@ public sealed class GamePresentationBuilder
         var dayNumber = dayLengthSeconds <= 0f
             ? 1
             : (int)MathF.Floor(totalElapsedSeconds / dayLengthSeconds) + 1;
-        var clockHours = (timeProgress * 24f + 6f) % 24f;
+        var clockHours = TimeOfDayRules.ResolveClockHours(timeProgress);
         var hour = (int)MathF.Floor(clockHours);
         var minute = (int)MathF.Floor((clockHours - hour) * 60f);
         var phase = ResolveTimePhase(clockHours);
@@ -274,12 +274,12 @@ public sealed class GamePresentationBuilder
             return "Dawn";
         }
 
-        if (clockHours is >= 7f and < 17f)
+        if (clockHours is >= 7f and < 19f)
         {
             return "Day";
         }
 
-        if (clockHours is >= 17f and < 19f)
+        if (clockHours is >= 17f and < 21f)
         {
             return "Dusk";
         }

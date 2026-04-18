@@ -50,8 +50,8 @@ public sealed class DebugCommandExecutor
                 }
 
                 _runtime.WorldState.TimeOfDaySeconds = string.Equals(parts[1], "night", StringComparison.OrdinalIgnoreCase)
-                    ? _runtime.BootstrapConfig.DayLengthSeconds * 0.75f
-                    : _runtime.BootstrapConfig.DayLengthSeconds * 0.25f;
+                    ? _runtime.BootstrapConfig.DayLengthSeconds * TimeOfDayRules.ResolveNormalizedTimeForHour(23f)
+                    : _runtime.BootstrapConfig.DayLengthSeconds * TimeOfDayRules.ResolveNormalizedTimeForHour(12f);
                 return $"Time set to {parts[1]}";
             case "teleport_portal":
                 return TeleportPortal();

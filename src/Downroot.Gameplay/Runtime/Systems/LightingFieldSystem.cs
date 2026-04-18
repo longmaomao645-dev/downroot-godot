@@ -108,23 +108,28 @@ public sealed class LightingFieldSystem(GameRuntime runtime, WorldRuntimeFacade 
             return DayOutdoorBrightness;
         }
 
-        var progress = ((timeOfDaySeconds % dayLengthSeconds) + dayLengthSeconds) % dayLengthSeconds / dayLengthSeconds;
-        if (progress < 0.40f)
+        var clockHours = TimeOfDayRules.ResolveClockHours(timeOfDaySeconds, dayLengthSeconds);
+        if (clockHours >= TimeOfDayRules.DayStartHour && clockHours < TimeOfDayRules.DuskStartHour)
         {
             return DayOutdoorBrightness;
         }
 
-        if (progress < 0.50f)
+        if (clockHours >= TimeOfDayRules.DawnStartHour && clockHours < TimeOfDayRules.DayStartHour)
         {
-            return Lerp(DayOutdoorBrightness, NightOutdoorBrightness, (progress - 0.40f) / 0.10f);
+            return Lerp(NightOutdoorBrightness, DayOutdoorBrightness, (clockHours - TimeOfDayRules.DawnStartHour) / (TimeOfDayRules.DayStartHour - TimeOfDayRules.DawnStartHour));
         }
 
-        if (progress < 0.90f)
+        if (clockHours >= TimeOfDayRules.DuskStartHour && clockHours < TimeOfDayRules.NightStartHour)
+        {
+            return Lerp(DayOutdoorBrightness, NightOutdoorBrightness, (clockHours - TimeOfDayRules.DuskStartHour) / (TimeOfDayRules.NightStartHour - TimeOfDayRules.DuskStartHour));
+        }
+
+        if (clockHours < TimeOfDayRules.DawnStartHour)
         {
             return NightOutdoorBrightness;
         }
 
-        return Lerp(NightOutdoorBrightness, DayOutdoorBrightness, (progress - 0.90f) / 0.10f);
+        return NightOutdoorBrightness;
     }
 
     private static int QuantizeSkylight(float outdoorLevel)

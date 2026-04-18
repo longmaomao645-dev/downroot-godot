@@ -49,7 +49,7 @@ public sealed class WorldState
     public bool IsEntityProjectionDirty { get; private set; } = true;
     public long EntityStateVersion { get; private set; }
 
-    public bool IsNight(float dayLengthSeconds) => TimeOfDaySeconds >= dayLengthSeconds * 0.5f;
+    public bool IsNight(float dayLengthSeconds) => TimeOfDayRules.IsNight(TimeOfDaySeconds, dayLengthSeconds);
 
     public LoadedWorldState GetActiveWorld()
     {
