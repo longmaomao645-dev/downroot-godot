@@ -82,6 +82,15 @@ public sealed class BaseGameContentPack : IContentPack
         var autumnTreeNodeId = new ContentId("basegame:tree_red_autumn");
         var deadBrownTreeNodeId = new ContentId("basegame:tree_dead_brown");
         var deadBlackTreeNodeId = new ContentId("basegame:tree_dead_black");
+        var youngGreenSplitTreeNodeId = new ContentId("basegame:tree_young_green_split");
+        var greenSplitTreeNodeId = new ContentId("basegame:tree_green_split");
+        var largeGreenSplitTreeNodeId = new ContentId("basegame:tree_large_green_split");
+        var smallPineSplitTreeNodeId = new ContentId("basegame:tree_small_pine_split");
+        var pineSplitTreeNodeId = new ContentId("basegame:tree_pine_split");
+        var largePineSplitTreeNodeId = new ContentId("basegame:tree_large_pine_split");
+        var smallSnowPineSplitTreeNodeId = new ContentId("basegame:tree_small_snow_pine_split");
+        var snowPineSplitTreeNodeId = new ContentId("basegame:tree_snow_pine_split");
+        var largeSnowPineSplitTreeNodeId = new ContentId("basegame:tree_large_snow_pine_split");
         var stoneNodeId = new ContentId("basegame:stone_node");
         var blueberryNodeId = new ContentId("basegame:blueberry_bush");
         var rockOutcropNodeId = new ContentId("basegame:rock_outcrop");
@@ -206,6 +215,15 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterResourceNode(new ResourceNodeDef(autumnTreeNodeId, "Red Autumn Tree", PackId, "packs/basegame/assets/world/nature/trees/red_autumn_tree.png", 32, 32, 0, 0, 3, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(deadBrownTreeNodeId, "Dead Brown Tree", PackId, "packs/basegame/assets/world/nature/trees/dead_brown_tree.png", 32, 32, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(deadBlackTreeNodeId, "Dead Black Tree", PackId, "packs/basegame/assets/world/nature/trees/dead_black_tree.png", 32, 32, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(youngGreenSplitTreeNodeId, "Young Green Tree", PackId, "packs/basegame/assets/world/nature/trees/split/broadleaf/young_green_tree.png", 36, 49, 0, 0, 3, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(greenSplitTreeNodeId, "Green Tree", PackId, "packs/basegame/assets/world/nature/trees/split/broadleaf/green_tree.png", 47, 61, 0, 0, 4, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(largeGreenSplitTreeNodeId, "Large Green Tree", PackId, "packs/basegame/assets/world/nature/trees/split/broadleaf/large_green_tree.png", 75, 73, 0, 0, 5, [new ItemAmount(logItemId, 4)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(smallPineSplitTreeNodeId, "Small Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/conifers/small_pine_tree.png", 26, 40, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(pineSplitTreeNodeId, "Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/conifers/pine_tree.png", 39, 56, 0, 0, 4, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(largePineSplitTreeNodeId, "Large Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/conifers/large_pine_tree.png", 51, 76, 0, 0, 5, [new ItemAmount(logItemId, 4)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(smallSnowPineSplitTreeNodeId, "Small Snow Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/snow_conifers/small_snow_pine_tree.png", 33, 43, 0, 0, 2, [new ItemAmount(logItemId, 2)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(snowPineSplitTreeNodeId, "Snow Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/snow_conifers/snow_pine_tree.png", 43, 61, 0, 0, 4, [new ItemAmount(logItemId, 3)], true, false, false, 0, true));
+        registrar.RegisterResourceNode(new ResourceNodeDef(largeSnowPineSplitTreeNodeId, "Large Snow Pine Tree", PackId, "packs/basegame/assets/world/nature/trees/split/snow_conifers/large_snow_pine_tree.png", 57, 77, 0, 0, 5, [new ItemAmount(logItemId, 4)], true, false, false, 0, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(stoneNodeId, "Stone Node", PackId, "packs/basegame/assets/world/nature/rocks/stone.png", 32, 32, 0, 0, 1, [new ItemAmount(stoneItemId, 1)], false, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(blueberryNodeId, "Blueberry Bush", PackId, "packs/basegame/assets/world/nature/plants/blueberry_bush.png", 16, 16, 0, 0, 1, [new ItemAmount(blueberryItemId, 1)], false, true));
         registrar.RegisterResourceNode(new ResourceNodeDef(rockOutcropNodeId, "Rock Outcrop", PackId, "packs/basegame/assets/world/nature/rocks/rock_outcrop.png", 32, 32, 0, 0, 4, [new ItemAmount(stoneItemId, 2)], true));
@@ -245,7 +263,27 @@ public sealed class BaseGameContentPack : IContentPack
             grassId,
             riverWaterId,
             rockOutcropNodeId,
-            [brightTreeNodeId, lushTreeNodeId, roundTreeNodeId, roundBushTreeNodeId, lightTrunkTreeNodeId, pineTreeNodeId, blossomTreeNodeId, autumnTreeNodeId, deadBrownTreeNodeId, deadBlackTreeNodeId],
+            [
+                brightTreeNodeId,
+                lushTreeNodeId,
+                roundTreeNodeId,
+                roundBushTreeNodeId,
+                lightTrunkTreeNodeId,
+                pineTreeNodeId,
+                blossomTreeNodeId,
+                autumnTreeNodeId,
+                deadBrownTreeNodeId,
+                deadBlackTreeNodeId,
+                youngGreenSplitTreeNodeId,
+                greenSplitTreeNodeId,
+                largeGreenSplitTreeNodeId,
+                smallPineSplitTreeNodeId,
+                pineSplitTreeNodeId,
+                largePineSplitTreeNodeId,
+                smallSnowPineSplitTreeNodeId,
+                snowPineSplitTreeNodeId,
+                largeSnowPineSplitTreeNodeId
+            ],
             blueberryNodeId,
             stoneNodeId,
             voiditeRaisedId,
@@ -307,7 +345,16 @@ public sealed class BaseGameContentPack : IContentPack
             ("basegame:spawn-tree-blossom", treeNodeIds[6], 1, 5),
             ("basegame:spawn-tree-autumn", treeNodeIds[7], 1, 5),
             ("basegame:spawn-tree-dead-brown", treeNodeIds[8], 1, 5),
-            ("basegame:spawn-tree-dead-black", treeNodeIds[9], 1, 5)
+            ("basegame:spawn-tree-dead-black", treeNodeIds[9], 1, 5),
+            ("basegame:spawn-tree-young-green-split", treeNodeIds[10], 2, 4),
+            ("basegame:spawn-tree-green-split", treeNodeIds[11], 2, 4),
+            ("basegame:spawn-tree-large-green-split", treeNodeIds[12], 1, 6),
+            ("basegame:spawn-tree-small-pine-split", treeNodeIds[13], 2, 4),
+            ("basegame:spawn-tree-pine-split", treeNodeIds[14], 2, 5),
+            ("basegame:spawn-tree-large-pine-split", treeNodeIds[15], 1, 6),
+            ("basegame:spawn-tree-small-snow-pine-split", treeNodeIds[16], 1, 5),
+            ("basegame:spawn-tree-snow-pine-split", treeNodeIds[17], 1, 5),
+            ("basegame:spawn-tree-large-snow-pine-split", treeNodeIds[18], 1, 6)
         };
         foreach (var treePass in treePasses)
         {

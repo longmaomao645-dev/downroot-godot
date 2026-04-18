@@ -924,7 +924,9 @@ public sealed partial class WorldRenderer : Node2D
         if (entity.Kind == WorldEntityKind.ResourceNode)
         {
             var resourceDef = runtime.Content.ResourceNodes.Get(entity.DefinitionId);
-            return ToGodot(new NumericsVector2(entity.Position.X, entity.Position.Y + TileSize - resourceDef.SpriteHeight));
+            var alignedX = entity.Position.X + ((TileSize - resourceDef.SpriteWidth) * 0.5f);
+            var alignedY = entity.Position.Y + TileSize - resourceDef.SpriteHeight;
+            return ToGodot(new NumericsVector2(alignedX, alignedY));
         }
 
         return ToGodot(entity.Position);
@@ -1206,8 +1208,7 @@ public sealed partial class WorldRenderer : Node2D
 
     private float ResolveResourceBrightness(WorldEntityState entity)
     {
-        var resourceDef = _runtime!.Content.ResourceNodes.Get(entity.DefinitionId);
-        var footWorld = new NumericsVector2(entity.Position.X + (resourceDef.SpriteWidth * 0.5f), entity.Position.Y + TileSize - 4f);
+        var footWorld = new NumericsVector2(entity.Position.X + (TileSize * 0.5f), entity.Position.Y + TileSize - 4f);
         return ResolveBiasedBrightness(_worldFacade!.GetWorldTile(footWorld), 0.10f);
     }
 
