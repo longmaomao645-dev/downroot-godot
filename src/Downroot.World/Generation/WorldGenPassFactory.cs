@@ -18,6 +18,15 @@ public static class WorldGenPassFactory
             WorldGenPassTypes.RockOutcrop => new RockOutcropPass(definition.TargetId),
             WorldGenPassTypes.PortalSite => new PortalSitePass(definition.TargetId, registries.PortalWorldLinks.ToArray()),
             WorldGenPassTypes.DirtPatch => new DirtPatchPass(definition.TargetId),
+            WorldGenPassTypes.BerryPatchSpawn => new BerryPatchSpawnPass(
+                definition.TargetId,
+                definition.Count,
+                definition.StartColumn,
+                definition.StartRow,
+                definition.Width,
+                definition.Height,
+                definition.MinSpacing,
+                definition.MaxCountOverride),
             WorldGenPassTypes.ScatterSpawn => new ScatterSpawnPass(
                 definition.TargetId,
                 definition.Count,

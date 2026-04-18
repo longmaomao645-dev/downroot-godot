@@ -417,7 +417,7 @@ public sealed class BaseGameContentPack : IContentPack
             avoidRiverBank: true,
             candidateDensity: 0.10f,
             maxCountOverride: 4);
-        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.ScatterSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 8, 0, 0, 28, 18, SurfaceRegions.GrassField, 2, RequireSupportsTrees: true));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.BerryPatchSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 2, 0, 0, 28, 18, null, 1, false, true, MaxCountOverride: 10));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-cockroaches"), WorldGenPassTypes.ScatterSpawn, cockroachId, WorldSpaceKind.Overworld, 4, 0, 0, 28, 18, SurfaceRegions.GrassField, 5));
