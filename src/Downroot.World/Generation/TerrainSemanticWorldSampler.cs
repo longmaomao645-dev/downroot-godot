@@ -113,7 +113,7 @@ public static class TerrainSemanticWorldSampler
                 return TerrainVisualKind.ShallowWater;
             }
 
-            if (neighbors.Contains(TerrainVisualKind.Mountain))
+            if (neighbors.Contains(TerrainVisualKind.Mountain) && region.Region != TerrainRegionKind.RiverBank)
             {
                 return TerrainVisualKind.Dirt;
             }
@@ -178,6 +178,11 @@ public static class TerrainSemanticWorldSampler
             return TerrainVisualKind.Dirt;
         }
 
+        if (fields.RiverBase <= 1.05f && fields.MoistureMacro <= 0.52f)
+        {
+            return TerrainVisualKind.Dirt;
+        }
+
         if (fields.MoistureMacro >= 0.62f && fields.ForestMass >= 0.57f)
         {
             return TerrainVisualKind.Grass;
@@ -236,9 +241,12 @@ public static class TerrainSemanticWorldSampler
 
         if (visual is TerrainVisualKind.Dirt or TerrainVisualKind.Grass
             && region.Region == TerrainRegionKind.MountainFoot
-            && neighborVisuals.Any(neighbor => neighbor == TerrainVisualKind.Mountain))
+            && (neighborVisuals.Any(neighbor => neighbor == TerrainVisualKind.Mountain)
+                || (region.IsSteepBankCandidate && neighborVisuals.Any(neighbor => neighbor is TerrainVisualKind.DeepWater or TerrainVisualKind.ShallowWater))))
         {
-            return HeightKind.Raised;
+            return region.IsSteepBankCandidate
+                ? HeightKind.Cliff
+                : HeightKind.Raised;
         }
 
         return HeightKind.Low;
