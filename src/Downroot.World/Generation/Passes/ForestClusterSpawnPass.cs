@@ -39,7 +39,7 @@ public sealed class ForestClusterSpawnPass(
             {
                 var coord = new LocalTileCoord(x, y);
                 var region = context.SampleTerrainRegion(coord);
-                if (requiredTerrainRegion.HasValue && region != requiredTerrainRegion.Value)
+                if (!IsEligibleRegion(region))
                 {
                     continue;
                 }
@@ -170,6 +170,23 @@ public sealed class ForestClusterSpawnPass(
             + (density * 0.78f)
             - (waterPenalty * 0.42f)
             + (jitter * 0.10f);
+    }
+
+    private bool IsEligibleRegion(TerrainRegionKind region)
+    {
+        if (requiredTerrainRegion.HasValue && region == requiredTerrainRegion.Value)
+        {
+            return true;
+        }
+
+        return biome switch
+        {
+            TreeBiomeKind.TemperateForestCore => region is TerrainRegionKind.ForestCore or TerrainRegionKind.ForestEdge,
+            TreeBiomeKind.ConiferMountainFoot => region is TerrainRegionKind.MountainFoot or TerrainRegionKind.ForestEdge or TerrainRegionKind.ForestCore,
+            TreeBiomeKind.SparseForestEdge => region is TerrainRegionKind.ForestEdge or TerrainRegionKind.OpenLowland,
+            TreeBiomeKind.OpenLowlandSparse => region is TerrainRegionKind.OpenLowland or TerrainRegionKind.ForestEdge,
+            _ => false
+        };
     }
 
     private int ComputeDesiredCount(int viableCandidateCount)

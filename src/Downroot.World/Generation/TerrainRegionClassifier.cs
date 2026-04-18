@@ -28,8 +28,8 @@ public static class TerrainRegionClassifier
             mountainCoreScore >= 0.74f ? TerrainRegionKind.MountainCore :
             mountainFootScore >= 0.64f ? TerrainRegionKind.MountainFoot :
             riverBankScore >= 0.58f ? TerrainRegionKind.RiverBank :
-            forestScore >= 0.57f ? TerrainRegionKind.ForestCore :
-            forestScore >= 0.44f && openScore < 0.76f ? TerrainRegionKind.ForestEdge :
+            forestScore >= 0.53f ? TerrainRegionKind.ForestCore :
+            forestScore >= 0.40f && openScore < 0.82f ? TerrainRegionKind.ForestEdge :
             fields.MoistureMacro <= 0.34f && fields.RiverBase <= 1.75f && openScore >= 0.47f ? TerrainRegionKind.MudFlat :
             TerrainRegionKind.OpenLowland;
 
@@ -76,16 +76,16 @@ public static class TerrainRegionClassifier
     private static float ComputeForestScore(TerrainMacroFields fields)
     {
         return (fields.ForestMass * 0.58f)
-            + (fields.MoistureMacro * 0.32f)
-            - (fields.OpenFieldBias * 0.28f)
-            - (Math.Clamp(1.05f - fields.RiverBase, 0f, 1f) * 0.12f);
+            + (fields.MoistureMacro * 0.36f)
+            - (fields.OpenFieldBias * 0.20f)
+            - (Math.Clamp(0.92f - fields.RiverBase, 0f, 1f) * 0.08f);
     }
 
     private static float ComputeOpenScore(TerrainMacroFields fields)
     {
-        return (fields.OpenFieldBias * 0.62f)
-            + ((1f - fields.ForestMass) * 0.23f)
-            + ((1f - fields.MoistureMacro) * 0.15f);
+        return (fields.OpenFieldBias * 0.56f)
+            + ((1f - fields.ForestMass) * 0.22f)
+            + ((1f - fields.MoistureMacro) * 0.12f);
     }
 
     private static float ComputeBankSharpness(

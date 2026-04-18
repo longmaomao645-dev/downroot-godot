@@ -362,6 +362,16 @@ public sealed class BaseGameContentPack : IContentPack
             treeNodeIds[8],
             treeNodeIds[9]
         };
+        var openLowlandSparseTreeIds = new[]
+        {
+            treeNodeIds[2],
+            treeNodeIds[3],
+            treeNodeIds[6],
+            treeNodeIds[8],
+            treeNodeIds[9],
+            treeNodeIds[10],
+            treeNodeIds[13]
+        };
 
         RegisterTreeClusterPass(
             registrar,
@@ -399,9 +409,9 @@ public sealed class BaseGameContentPack : IContentPack
         RegisterTreeClusterPass(
             registrar,
             "basegame:spawn-open-sparse-trees",
-            sparseEdgeTreeIds[0],
+            openLowlandSparseTreeIds[0],
             TreeBiomeKind.OpenLowlandSparse,
-            sparseEdgeTreeIds,
+            openLowlandSparseTreeIds,
             minSpacing: 5,
             requiredTerrainRegion: TerrainRegionKind.OpenLowland,
             avoidRiverBank: true,
