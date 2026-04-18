@@ -24,6 +24,7 @@ public static class TerrainRegionClassifier
         var bankSharpness = ComputeBankSharpness(fields, riverChannelScore, riverBankScore, mountainCoreScore, mountainFootScore);
 
         var region =
+            fields.RiverBase <= 0.90f ? TerrainRegionKind.RiverChannel :
             riverChannelScore >= 0.72f ? TerrainRegionKind.RiverChannel :
             mountainCoreScore >= 0.74f ? TerrainRegionKind.MountainCore :
             mountainFootScore >= 0.64f ? TerrainRegionKind.MountainFoot :

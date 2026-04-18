@@ -73,6 +73,11 @@ public sealed class ForestClusterSpawnPass(
                     continue;
                 }
 
+                if (!OwnsBiome(context, world, region, density))
+                {
+                    continue;
+                }
+
                 candidates.Add(new TreeSpawnCandidate(
                     coord,
                     region,
@@ -192,6 +197,59 @@ public sealed class ForestClusterSpawnPass(
         }
 
         return Math.Max(biome == TreeBiomeKind.OpenLowlandSparse ? 3 : 2, spacing);
+    }
+
+    private bool OwnsBiome(IWorldGenContext context, WorldTileCoord world, TerrainRegionKind region, float density)
+    {
+        var fields = TerrainMacroFieldSampler.Sample(context.WorldSpaceKind, context.WorldSeed, world);
+        var targetScore = GetBiomeOwnershipScore(biome, region, fields, density);
+        foreach (var candidateBiome in Enum.GetValues<TreeBiomeKind>())
+        {
+            if (candidateBiome == biome)
+            {
+                continue;
+            }
+
+            if (GetBiomeOwnershipScore(candidateBiome, region, fields, density) > targetScore)
+            {
+                return false;
+            }
+        }
+
+        return targetScore > 0f;
+    }
+
+    private static float GetBiomeOwnershipScore(TreeBiomeKind candidateBiome, TerrainRegionKind region, TerrainMacroFields fields, float density)
+    {
+        return candidateBiome switch
+        {
+            TreeBiomeKind.TemperateForestCore => region switch
+            {
+                TerrainRegionKind.ForestCore => 1.00f + (fields.ForestMass * 0.20f) + (density * 0.15f) - (fields.RidgeMacro * 0.10f),
+                TerrainRegionKind.ForestEdge => 0.55f + (fields.MoistureMacro * 0.15f) + (density * 0.10f),
+                _ => -1f
+            },
+            TreeBiomeKind.ConiferMountainFoot => region switch
+            {
+                TerrainRegionKind.MountainFoot => 1.02f + (fields.RidgeMacro * 0.18f) + (fields.TemperatureBias * 0.18f),
+                TerrainRegionKind.ForestCore => 0.48f + (fields.RidgeMacro * 0.16f) + (fields.TemperatureBias * 0.14f),
+                TerrainRegionKind.ForestEdge => 0.42f + (fields.RidgeMacro * 0.12f) + (fields.TemperatureBias * 0.12f),
+                _ => -1f
+            },
+            TreeBiomeKind.SparseForestEdge => region switch
+            {
+                TerrainRegionKind.ForestEdge => 0.98f + (fields.OpenFieldBias * 0.14f) + (density * 0.12f),
+                TerrainRegionKind.OpenLowland => 0.45f + (fields.OpenFieldBias * 0.18f),
+                _ => -1f
+            },
+            TreeBiomeKind.OpenLowlandSparse => region switch
+            {
+                TerrainRegionKind.OpenLowland => 0.92f + (fields.OpenFieldBias * 0.20f) + ((1f - density) * 0.10f),
+                TerrainRegionKind.ForestEdge => 0.20f + (fields.OpenFieldBias * 0.08f),
+                _ => -1f
+            },
+            _ => -1f
+        };
     }
 
     private bool IsEligibleRegion(TerrainRegionKind region)
