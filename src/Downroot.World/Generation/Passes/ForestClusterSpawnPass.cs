@@ -218,7 +218,7 @@ public sealed class ForestClusterSpawnPass(
 
     private List<TreeSpawnCandidate> SelectPatchCenters(IReadOnlyList<TreeSpawnCandidate> candidates, int desiredCount)
     {
-        var centerTarget = Math.Max(1, (int)MathF.Ceiling(desiredCount / (biome == TreeBiomeKind.OpenLowlandSparse ? 1.6f : 3.5f)));
+        var centerTarget = Math.Max(1, (int)MathF.Ceiling(desiredCount / (biome == TreeBiomeKind.OpenLowlandSparse ? 1.3f : 2.2f)));
         var centers = new List<TreeSpawnCandidate>();
         foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Score))
         {
@@ -227,7 +227,7 @@ public sealed class ForestClusterSpawnPass(
                 break;
             }
 
-            if (centers.Any(existing => DistanceSquared(existing.Coord, candidate.Coord) < 36))
+            if (centers.Any(existing => DistanceSquared(existing.Coord, candidate.Coord) < 20))
             {
                 continue;
             }
@@ -308,7 +308,7 @@ public sealed class ForestClusterSpawnPass(
                 continue;
             }
 
-            if (GetBiomeOwnershipScore(candidateBiome, region, fields, density) > targetScore)
+            if (GetBiomeOwnershipScore(candidateBiome, region, fields, density) > targetScore + 0.18f)
             {
                 return false;
             }
@@ -325,6 +325,7 @@ public sealed class ForestClusterSpawnPass(
             {
                 TerrainRegionKind.ForestCore => 1.00f + (fields.ForestMass * 0.20f) + (density * 0.15f) - (fields.RidgeMacro * 0.10f),
                 TerrainRegionKind.ForestEdge => 0.55f + (fields.MoistureMacro * 0.15f) + (density * 0.10f),
+                TerrainRegionKind.OpenLowland => 0.20f + (fields.ForestMass * 0.12f) + (fields.MoistureMacro * 0.10f),
                 _ => -1f
             },
             TreeBiomeKind.ConiferMountainFoot => region switch
@@ -332,6 +333,7 @@ public sealed class ForestClusterSpawnPass(
                 TerrainRegionKind.MountainFoot => 1.02f + (fields.RidgeMacro * 0.18f) + (fields.TemperatureBias * 0.18f),
                 TerrainRegionKind.ForestCore => 0.48f + (fields.RidgeMacro * 0.16f) + (fields.TemperatureBias * 0.14f),
                 TerrainRegionKind.ForestEdge => 0.42f + (fields.RidgeMacro * 0.12f) + (fields.TemperatureBias * 0.12f),
+                TerrainRegionKind.OpenLowland => 0.12f + (fields.RidgeMacro * 0.08f) + (fields.TemperatureBias * 0.10f),
                 _ => -1f
             },
             TreeBiomeKind.SparseForestEdge => region switch
@@ -359,8 +361,8 @@ public sealed class ForestClusterSpawnPass(
 
         return biome switch
         {
-            TreeBiomeKind.TemperateForestCore => region is TerrainRegionKind.ForestCore or TerrainRegionKind.ForestEdge,
-            TreeBiomeKind.ConiferMountainFoot => region is TerrainRegionKind.MountainFoot or TerrainRegionKind.ForestEdge or TerrainRegionKind.ForestCore,
+            TreeBiomeKind.TemperateForestCore => region is TerrainRegionKind.ForestCore or TerrainRegionKind.ForestEdge or TerrainRegionKind.OpenLowland,
+            TreeBiomeKind.ConiferMountainFoot => region is TerrainRegionKind.MountainFoot or TerrainRegionKind.ForestEdge or TerrainRegionKind.ForestCore or TerrainRegionKind.OpenLowland,
             TreeBiomeKind.SparseForestEdge => region is TerrainRegionKind.ForestEdge or TerrainRegionKind.OpenLowland,
             TreeBiomeKind.OpenLowlandSparse => region is TerrainRegionKind.OpenLowland or TerrainRegionKind.ForestEdge,
             _ => false
@@ -375,6 +377,11 @@ public sealed class ForestClusterSpawnPass(
         }
 
         var desired = (int)MathF.Ceiling(viableCandidateCount * candidateDensity);
+        if (biome != TreeBiomeKind.OpenLowlandSparse)
+        {
+            desired = Math.Max(desired, Math.Min(6, viableCandidateCount));
+        }
+
         if (maxCountOverride.HasValue)
         {
             desired = Math.Min(desired, maxCountOverride.Value);

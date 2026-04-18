@@ -412,11 +412,11 @@ public sealed class BaseGameContentPack : IContentPack
             openLowlandSparseTreeIds[0],
             TreeBiomeKind.OpenLowlandSparse,
             openLowlandSparseTreeIds,
-            minSpacing: 5,
+            minSpacing: 4,
             requiredTerrainRegion: TerrainRegionKind.OpenLowland,
             avoidRiverBank: true,
-            candidateDensity: 0.10f,
-            maxCountOverride: 4);
+            candidateDensity: 0.18f,
+            maxCountOverride: 8);
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.BerryPatchSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 2, 0, 0, 28, 18, null, 1, false, true, MaxCountOverride: 10));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
