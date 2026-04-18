@@ -176,7 +176,7 @@ public sealed class GamePresentationBuilder
             { Kind: StatusEventKind.InventoryFull } => new StatusBannerViewData(true, "Inventory full"),
             { Kind: StatusEventKind.EnteredPortal } => new StatusBannerViewData(true, "Entering Portal"),
             { Kind: StatusEventKind.ReturnedThroughPortal } => new StatusBannerViewData(true, "Returned to Overworld"),
-            { Kind: StatusEventKind.Respawned } => new StatusBannerViewData(true, "Respawned at home"),
+            { Kind: StatusEventKind.Respawned } => new StatusBannerViewData(true, "Respawned at spawn point"),
             { Kind: StatusEventKind.HomeSet } => new StatusBannerViewData(true, "Home bed updated"),
             { Kind: StatusEventKind.SleptUntilMorning } => new StatusBannerViewData(true, "Slept until morning"),
             { Kind: StatusEventKind.LightLit } => new StatusBannerViewData(true, "Light source lit"),
