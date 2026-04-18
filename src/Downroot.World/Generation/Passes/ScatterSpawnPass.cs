@@ -17,13 +17,15 @@ public sealed class ScatterSpawnPass(
     TerrainRegionKind? requiredTerrainRegion,
     bool preferForestCore,
     bool preferForestEdge,
-    bool avoidRiverBank) : IWorldGenPass
+    bool avoidRiverBank,
+    float candidateDensity,
+    int? maxCountOverride) : IWorldGenPass
 {
     public string Name => WorldGenPassTypes.ScatterSpawn;
 
     public void Execute(IWorldGenContext context)
     {
-        if (count <= 0)
+        if (count <= 0 && candidateDensity <= 0f && maxCountOverride is null)
         {
             return;
         }
@@ -75,17 +77,27 @@ public sealed class ScatterSpawnPass(
             }
         }
 
-        var ordered = candidates
-            .OrderByDescending(coord => ScoreCandidate(context, coord))
+        var scored = candidates
+            .Select(coord => new ScoredCandidate(coord, ScoreCandidate(context, coord)))
+            .Where(candidate => candidate.Score >= GetMinimumAcceptedScore())
+            .OrderByDescending(candidate => candidate.Score)
             .ToArray();
-        var chosen = new List<LocalTileCoord>();
-        foreach (var coord in ordered)
+
+        var desiredCount = ComputeDesiredCount(scored.Length);
+        if (desiredCount <= 0)
         {
-            if (chosen.Count >= count)
+            return;
+        }
+
+        var chosen = new List<LocalTileCoord>();
+        foreach (var candidate in scored)
+        {
+            if (chosen.Count >= desiredCount)
             {
                 break;
             }
 
+            var coord = candidate.Coord;
             if (context.IsSpawnOccupied(coord))
             {
                 continue;
@@ -111,17 +123,20 @@ public sealed class ScatterSpawnPass(
         }
 
         var region = context.SampleTerrainRegion(coord);
+        var fields = TerrainMacroFieldSampler.Sample(context.WorldSpaceKind, context.WorldSeed, world);
+        var density = ForestDensitySampler.Sample(context.WorldSpaceKind, context.WorldSeed, world, region);
+        var waterPenalty = Math.Clamp(1.15f - fields.RiverBase, 0f, 1f);
         float score = region switch
         {
-            TerrainRegionKind.ForestCore => 1.0f,
-            TerrainRegionKind.ForestEdge => 0.74f,
-            TerrainRegionKind.OpenLowland => 0.38f,
-            TerrainRegionKind.RiverBank => 0.18f,
+            TerrainRegionKind.ForestCore => 0.92f,
+            TerrainRegionKind.ForestEdge => 0.66f,
+            TerrainRegionKind.OpenLowland => 0.20f,
+            TerrainRegionKind.RiverBank => 0.08f,
             TerrainRegionKind.MountainCore => -100f,
             TerrainRegionKind.RiverChannel => -100f,
-            TerrainRegionKind.MudFlat => 0.22f,
-            TerrainRegionKind.MountainFoot => 0.46f,
-            _ => 0.30f
+            TerrainRegionKind.MudFlat => 0.06f,
+            TerrainRegionKind.MountainFoot => 0.58f,
+            _ => 0.16f
         };
 
         if (preferForestCore)
@@ -139,7 +154,67 @@ public sealed class ScatterSpawnPass(
             score -= 0.8f;
         }
 
-        return score + (jitter * 0.15f);
+        if (requiredTerrainRegion == TerrainRegionKind.MountainFoot)
+        {
+            score += (fields.TemperatureBias >= 0.46f ? 0.14f : -0.04f);
+            score += (fields.RidgeMacro * 0.12f);
+        }
+        else
+        {
+            score += ((1f - Math.Abs(fields.TemperatureBias - 0.52f)) * 0.08f);
+        }
+
+        var semantic = context.GetSurfaceSemantic(coord);
+        if (!semantic.SupportsTrees)
+        {
+            return -100f;
+        }
+
+        if (semantic.Visual == TerrainVisualKind.Mountain)
+        {
+            return -100f;
+        }
+
+        return score
+            + (density * 0.85f)
+            - (waterPenalty * 0.48f)
+            + (jitter * 0.12f);
+    }
+
+    private int ComputeDesiredCount(int viableCandidateCount)
+    {
+        if (viableCandidateCount <= 0)
+        {
+            return 0;
+        }
+
+        if (candidateDensity > 0f || maxCountOverride.HasValue)
+        {
+            var desired = (int)MathF.Ceiling(viableCandidateCount * MathF.Max(0f, candidateDensity));
+            if (count > 0)
+            {
+                desired = Math.Max(desired, Math.Min(count, viableCandidateCount));
+            }
+
+            if (maxCountOverride.HasValue)
+            {
+                desired = Math.Min(desired, maxCountOverride.Value);
+            }
+
+            return Math.Clamp(desired, 0, viableCandidateCount);
+        }
+
+        return Math.Min(count, viableCandidateCount);
+    }
+
+    private float GetMinimumAcceptedScore()
+    {
+        if (requireSupportsTrees || requiredTerrainRegion is not null || preferForestCore || preferForestEdge || avoidRiverBank)
+        {
+            return 0.35f;
+        }
+
+        return float.MinValue;
     }
 
     private static int DistanceSquared(LocalTileCoord a, LocalTileCoord b)
@@ -148,4 +223,6 @@ public sealed class ScatterSpawnPass(
         var dy = a.Y - b.Y;
         return (dx * dx) + (dy * dy);
     }
+
+    private readonly record struct ScoredCandidate(LocalTileCoord Coord, float Score);
 }

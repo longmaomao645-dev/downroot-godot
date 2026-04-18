@@ -32,7 +32,9 @@ public static class WorldGenPassFactory
                 definition.RequiredTerrainRegion,
                 definition.PreferForestCore,
                 definition.PreferForestEdge,
-                definition.AvoidRiverBank),
+                definition.AvoidRiverBank,
+                definition.CandidateDensity,
+                definition.MaxCountOverride),
             _ => throw new InvalidOperationException($"Unknown world gen pass type '{definition.PassType}' for '{definition.Id}'.")
         };
     }

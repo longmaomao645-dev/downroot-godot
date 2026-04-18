@@ -19,4 +19,6 @@ public sealed record WorldGenPassDef(
     TerrainRegionKind? RequiredTerrainRegion = null,
     bool PreferForestCore = false,
     bool PreferForestEdge = false,
-    bool AvoidRiverBank = false);
+    bool AvoidRiverBank = false,
+    float CandidateDensity = 1f,
+    int? MaxCountOverride = null);
