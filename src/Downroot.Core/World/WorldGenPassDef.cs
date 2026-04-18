@@ -21,4 +21,6 @@ public sealed record WorldGenPassDef(
     bool PreferForestEdge = false,
     bool AvoidRiverBank = false,
     float CandidateDensity = 1f,
-    int? MaxCountOverride = null);
+    int? MaxCountOverride = null,
+    TreeBiomeKind? TreeBiome = null,
+    IReadOnlyList<ContentId>? SpeciesPoolIds = null);

@@ -363,88 +363,86 @@ public sealed class BaseGameContentPack : IContentPack
             treeNodeIds[9]
         };
 
-        RegisterTreePasses(
+        RegisterTreeClusterPass(
             registrar,
-            "basegame:forest-core-tree",
+            "basegame:spawn-temperate-forest-core",
+            temperateForestTreeIds[0],
+            TreeBiomeKind.TemperateForestCore,
             temperateForestTreeIds,
-            count: 0,
             minSpacing: 4,
             requiredTerrainRegion: TerrainRegionKind.ForestCore,
-            preferForestCore: true,
             avoidRiverBank: true,
             candidateDensity: 0.24f,
-            maxCountOverride: 6);
-        RegisterTreePasses(
+            maxCountOverride: 10);
+        RegisterTreeClusterPass(
             registrar,
-            "basegame:forest-conifer-tree",
+            "basegame:spawn-conifer-mountain-foot",
+            coniferForestTreeIds[0],
+            TreeBiomeKind.ConiferMountainFoot,
             coniferForestTreeIds,
-            count: 0,
             minSpacing: 5,
             requiredTerrainRegion: TerrainRegionKind.MountainFoot,
             avoidRiverBank: true,
-            candidateDensity: 0.20f,
-            maxCountOverride: 5);
-        RegisterTreePasses(
+            candidateDensity: 0.22f,
+            maxCountOverride: 8);
+        RegisterTreeClusterPass(
             registrar,
-            "basegame:forest-edge-tree",
+            "basegame:spawn-sparse-forest-edge",
+            sparseEdgeTreeIds[0],
+            TreeBiomeKind.SparseForestEdge,
             sparseEdgeTreeIds,
-            count: 0,
             minSpacing: 5,
             requiredTerrainRegion: TerrainRegionKind.ForestEdge,
-            preferForestEdge: true,
             avoidRiverBank: true,
-            candidateDensity: 0.15f,
-            maxCountOverride: 3);
-        RegisterTreePasses(
+            candidateDensity: 0.18f,
+            maxCountOverride: 5);
+        RegisterTreeClusterPass(
             registrar,
-            "basegame:open-sparse-tree",
+            "basegame:spawn-open-sparse-trees",
+            sparseEdgeTreeIds[0],
+            TreeBiomeKind.OpenLowlandSparse,
             sparseEdgeTreeIds,
-            count: 0,
             minSpacing: 6,
             requiredTerrainRegion: TerrainRegionKind.OpenLowland,
             avoidRiverBank: true,
-            candidateDensity: 0.05f,
-            maxCountOverride: 1);
+            candidateDensity: 0.06f,
+            maxCountOverride: 2);
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.ScatterSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 8, 0, 0, 28, 18, SurfaceRegions.GrassField, 2, RequireSupportsTrees: true));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-stones"), WorldGenPassTypes.ScatterSpawn, stoneNodeId, WorldSpaceKind.Overworld, 10, 0, 0, 28, 18, SurfaceRegions.DirtField, 2));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-worms"), WorldGenPassTypes.ScatterSpawn, wormId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.DirtField, 5));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-cockroaches"), WorldGenPassTypes.ScatterSpawn, cockroachId, WorldSpaceKind.Overworld, 4, 0, 0, 28, 18, SurfaceRegions.GrassField, 5));
     }
 
-    private static void RegisterTreePasses(
+    private static void RegisterTreeClusterPass(
         IContentRegistrar registrar,
-        string passPrefix,
-        IReadOnlyList<ContentId> treeIds,
-        int count,
+        string passId,
+        ContentId targetId,
+        TreeBiomeKind biome,
+        IReadOnlyList<ContentId> speciesPool,
         int minSpacing,
         TerrainRegionKind? requiredTerrainRegion = null,
-        bool preferForestCore = false,
-        bool preferForestEdge = false,
         bool avoidRiverBank = false,
         float candidateDensity = 1f,
         int? maxCountOverride = null)
     {
-        for (var index = 0; index < treeIds.Count; index++)
-        {
-            registrar.RegisterWorldGenPass(new WorldGenPassDef(
-                new ContentId($"{passPrefix}-{index}"),
-                WorldGenPassTypes.ScatterSpawn,
-                treeIds[index],
-                WorldSpaceKind.Overworld,
-                count,
-                0,
-                0,
-                28,
-                18,
-                null,
-                minSpacing,
-                RequireSupportsTrees: true,
-                RequiredTerrainRegion: requiredTerrainRegion,
-                PreferForestCore: preferForestCore,
-                PreferForestEdge: preferForestEdge,
-                AvoidRiverBank: avoidRiverBank,
-                CandidateDensity: candidateDensity,
-                MaxCountOverride: maxCountOverride));
-        }
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(
+            new ContentId(passId),
+            WorldGenPassTypes.ForestClusterSpawn,
+            targetId,
+            WorldSpaceKind.Overworld,
+            0,
+            0,
+            0,
+            28,
+            18,
+            null,
+            minSpacing,
+            RequireSupportsTrees: true,
+            RequiredTerrainRegion: requiredTerrainRegion,
+            AvoidRiverBank: avoidRiverBank,
+            CandidateDensity: candidateDensity,
+            MaxCountOverride: maxCountOverride,
+            TreeBiome: biome,
+            SpeciesPoolIds: speciesPool));
     }
 }

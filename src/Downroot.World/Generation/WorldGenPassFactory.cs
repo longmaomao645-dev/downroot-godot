@@ -35,6 +35,20 @@ public static class WorldGenPassFactory
                 definition.AvoidRiverBank,
                 definition.CandidateDensity,
                 definition.MaxCountOverride),
+            WorldGenPassTypes.ForestClusterSpawn => new ForestClusterSpawnPass(
+                definition.TreeBiome ?? throw new InvalidOperationException($"Tree biome missing for '{definition.Id}'."),
+                definition.SpeciesPoolIds ?? throw new InvalidOperationException($"Species pool missing for '{definition.Id}'."),
+                definition.StartColumn,
+                definition.StartRow,
+                definition.Width,
+                definition.Height,
+                definition.MinSpacing,
+                definition.RequireBuildable,
+                definition.RequireSupportsTrees,
+                definition.RequiredTerrainRegion,
+                definition.AvoidRiverBank,
+                definition.CandidateDensity,
+                definition.MaxCountOverride),
             _ => throw new InvalidOperationException($"Unknown world gen pass type '{definition.PassType}' for '{definition.Id}'.")
         };
     }
