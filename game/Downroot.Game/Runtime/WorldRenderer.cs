@@ -757,7 +757,7 @@ public sealed partial class WorldRenderer : Node2D
             Enabled = true,
             PositionSmoothingEnabled = true,
             PositionSmoothingSpeed = 6f,
-            Zoom = new Vector2(2f, 2f)
+            Zoom = new Vector2(2.5f, 2.5f)
         };
         _playerBody.AddChild(camera);
         AddChild(_playerBody);
