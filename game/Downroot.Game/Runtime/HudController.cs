@@ -118,7 +118,7 @@ public sealed class HudController
         }
 
         _view.TimeOfDayLabel.Text = hudStatus.TimeOfDayLabel;
-        _view.NightOverlay.Color = new Color(0.03f, 0.05f, 0.15f, 0f);
+        _view.NightOverlay.Color = new Color(0.03f, 0.05f, 0.15f, hudStatus.NightOverlayAlpha);
         _view.HitOverlay.Color = new Color(0.85f, 0.08f, 0.08f, hudStatus.PlayerHitFlashAlpha);
         _view.SetBarValue(_view.HealthBarWidget, hudStatus.HealthPercent);
         _view.SetBarValue(_view.HungerBarWidget, hudStatus.HungerPercent);

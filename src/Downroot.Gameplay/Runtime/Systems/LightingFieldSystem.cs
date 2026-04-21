@@ -116,12 +116,18 @@ public sealed class LightingFieldSystem(GameRuntime runtime, WorldRuntimeFacade 
 
         if (clockHours >= TimeOfDayRules.DawnStartHour && clockHours < TimeOfDayRules.DayStartHour)
         {
-            return Lerp(NightOutdoorBrightness, DayOutdoorBrightness, (clockHours - TimeOfDayRules.DawnStartHour) / (TimeOfDayRules.DayStartHour - TimeOfDayRules.DawnStartHour));
+            return Lerp(
+                NightOutdoorBrightness,
+                DayOutdoorBrightness,
+                SmoothStep01((clockHours - TimeOfDayRules.DawnStartHour) / (TimeOfDayRules.DayStartHour - TimeOfDayRules.DawnStartHour)));
         }
 
         if (clockHours >= TimeOfDayRules.DuskStartHour && clockHours < TimeOfDayRules.NightStartHour)
         {
-            return Lerp(DayOutdoorBrightness, NightOutdoorBrightness, (clockHours - TimeOfDayRules.DuskStartHour) / (TimeOfDayRules.NightStartHour - TimeOfDayRules.DuskStartHour));
+            return Lerp(
+                DayOutdoorBrightness,
+                NightOutdoorBrightness,
+                SmoothStep01((clockHours - TimeOfDayRules.DuskStartHour) / (TimeOfDayRules.NightStartHour - TimeOfDayRules.DuskStartHour)));
         }
 
         if (clockHours < TimeOfDayRules.DawnStartHour)
@@ -156,6 +162,12 @@ public sealed class LightingFieldSystem(GameRuntime runtime, WorldRuntimeFacade 
     private static float Lerp(float from, float to, float t)
     {
         return from + ((to - from) * Math.Clamp(t, 0f, 1f));
+    }
+
+    private static float SmoothStep01(float t)
+    {
+        var clamped = Math.Clamp(t, 0f, 1f);
+        return clamped * clamped * (3f - (2f * clamped));
     }
 
     private static void WriteEmitterLight(
