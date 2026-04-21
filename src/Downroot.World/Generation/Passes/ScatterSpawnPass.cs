@@ -165,12 +165,19 @@ public sealed class ScatterSpawnPass(
         }
 
         var semantic = context.GetSurfaceSemantic(coord);
-        if (!semantic.SupportsTrees)
+        if (semantic.Visual == TerrainVisualKind.Mountain)
         {
             return -100f;
         }
 
-        if (semantic.Visual == TerrainVisualKind.Mountain)
+        if (!requireSupportsTrees)
+        {
+            return score
+                + (jitter * 0.28f)
+                - (waterPenalty * 0.18f);
+        }
+
+        if (!semantic.SupportsTrees)
         {
             return -100f;
         }
@@ -209,9 +216,14 @@ public sealed class ScatterSpawnPass(
 
     private float GetMinimumAcceptedScore()
     {
-        if (requireSupportsTrees || requiredTerrainRegion is not null || preferForestCore || preferForestEdge || avoidRiverBank)
+        if (requireSupportsTrees || preferForestCore || preferForestEdge)
         {
             return 0.35f;
+        }
+
+        if (requiredTerrainRegion is not null || avoidRiverBank)
+        {
+            return 0.10f;
         }
 
         return float.MinValue;
