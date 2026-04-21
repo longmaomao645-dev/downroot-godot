@@ -404,8 +404,8 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 3,
             requiredTerrainRegion: TerrainRegionKind.ForestEdge,
             avoidRiverBank: true,
-            candidateDensity: 0.38f,
-            maxCountOverride: 16);
+            candidateDensity: 0.52f,
+            maxCountOverride: 22);
         RegisterTreeClusterPass(
             registrar,
             "basegame:spawn-open-sparse-trees",
@@ -415,15 +415,15 @@ public sealed class BaseGameContentPack : IContentPack
             minSpacing: 4,
             requiredTerrainRegion: TerrainRegionKind.OpenLowland,
             avoidRiverBank: true,
-            candidateDensity: 0.22f,
-            maxCountOverride: 10);
+            candidateDensity: 0.34f,
+            maxCountOverride: 16);
         registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-berries"), WorldGenPassTypes.BerryPatchSpawn, blueberryNodeId, WorldSpaceKind.Overworld, 2, 0, 0, 28, 18, null, 1, false, true, MaxCountOverride: 10));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(
-            new ContentId("basegame:spawn-stones"),
+            new ContentId("basegame:spawn-stones-open-lowland"),
             WorldGenPassTypes.ScatterSpawn,
             stoneNodeId,
             WorldSpaceKind.Overworld,
-            8,
+            6,
             0,
             0,
             28,
@@ -431,8 +431,40 @@ public sealed class BaseGameContentPack : IContentPack
             null,
             2,
             RequiredTerrainRegion: TerrainRegionKind.OpenLowland,
-            CandidateDensity: 0.10f,
-            MaxCountOverride: 8));
+            CandidateDensity: 0.08f,
+            MaxCountOverride: 6));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(
+            new ContentId("basegame:spawn-stones-forest-edge"),
+            WorldGenPassTypes.ScatterSpawn,
+            stoneNodeId,
+            WorldSpaceKind.Overworld,
+            4,
+            0,
+            0,
+            28,
+            18,
+            null,
+            3,
+            RequiredTerrainRegion: TerrainRegionKind.ForestEdge,
+            AvoidRiverBank: true,
+            CandidateDensity: 0.06f,
+            MaxCountOverride: 4));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(
+            new ContentId("basegame:spawn-stones-forest-core"),
+            WorldGenPassTypes.ScatterSpawn,
+            stoneNodeId,
+            WorldSpaceKind.Overworld,
+            3,
+            0,
+            0,
+            28,
+            18,
+            null,
+            3,
+            RequiredTerrainRegion: TerrainRegionKind.ForestCore,
+            AvoidRiverBank: true,
+            CandidateDensity: 0.04f,
+            MaxCountOverride: 3));
         registrar.RegisterWorldGenPass(new WorldGenPassDef(
             new ContentId("basegame:spawn-stones-mountain-foot"),
             WorldGenPassTypes.ScatterSpawn,
