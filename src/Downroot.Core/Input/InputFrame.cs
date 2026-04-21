@@ -8,6 +8,7 @@ public sealed record InputFrame(
     bool InteractPressed,
     bool DestroyHeld,
     bool PlacePressed,
+    bool ZoomOutHeld,
     bool InventoryToggled,
     bool CraftPressed,
     bool ConsumePressed,

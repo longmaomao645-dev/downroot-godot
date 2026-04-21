@@ -24,6 +24,9 @@ public sealed partial class WorldRenderer : Node2D
     private const int MaxEntitySortSpan = 1023;
     private const double ChunkTerrainAttachBudgetMsPerFrame = 1.25d;
     private const int ChunkTerrainAttachHardSpriteCapPerFrame = 32;
+    private const float BaseCameraZoom = 2.5f;
+    private const float TemporaryZoomOutFactor = 5f;
+    private const float CameraZoomLerpSpeed = 14f;
 
     private readonly TextureContentLoader _textureLoader;
     private readonly PlayerAnimationFactory _animationFactory;
@@ -45,6 +48,7 @@ public sealed partial class WorldRenderer : Node2D
     private Node2D? _entityLayer;
     private CharacterBody2D? _playerBody;
     private AnimatedSprite2D? _playerSprite;
+    private Camera2D? _camera;
     private string _lastFacing = "down";
     private WorldSpaceKind? _lastRenderedWorldSpaceKind;
     private long _lastChunkVisualVersion = -1;
@@ -110,6 +114,7 @@ public sealed partial class WorldRenderer : Node2D
             }
 
             _playerSprite.Modulate = ResolvePlayerModulate();
+            UpdateCameraZoom(frame.ZoomOutHeld);
         }
 
         using (RuntimeProfiler.Measure("WorldRenderer.SyncWorldVisuals"))
@@ -757,10 +762,26 @@ public sealed partial class WorldRenderer : Node2D
             Enabled = true,
             PositionSmoothingEnabled = true,
             PositionSmoothingSpeed = 6f,
-            Zoom = new Vector2(2.5f, 2.5f)
+            Zoom = new Vector2(BaseCameraZoom, BaseCameraZoom)
         };
+        _camera = camera;
         _playerBody.AddChild(camera);
         AddChild(_playerBody);
+    }
+
+    private void UpdateCameraZoom(bool zoomOutHeld)
+    {
+        if (_camera is null)
+        {
+            return;
+        }
+
+        var targetZoomScalar = zoomOutHeld
+            ? BaseCameraZoom / TemporaryZoomOutFactor
+            : BaseCameraZoom;
+        var target = new Vector2(targetZoomScalar, targetZoomScalar);
+        var weight = 1f - MathF.Exp(-CameraZoomLerpSpeed * (float)GetPhysicsProcessDeltaTime());
+        _camera.Zoom = _camera.Zoom.Lerp(target, weight);
     }
 
     private void SynchronizeEntityStructure()

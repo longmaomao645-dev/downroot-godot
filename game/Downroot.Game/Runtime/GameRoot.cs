@@ -96,7 +96,7 @@ public partial class GameRoot : Node2D
             _startupOverlay.UpdateStatus("Validating content");
             _worldRenderer.ValidateContentLoads(_runtime);
 
-            _worldRenderer.Update(new InputFrame(default, default, false, false, false, false, false, false, 0, null));
+            _worldRenderer.Update(new InputFrame(default, default, false, false, false, false, false, false, false, 0, null));
             _hudController.Refresh(_runtime, _worldRenderer.WorldToScreen);
             _startupOverlay.Hide();
             _initialized = true;

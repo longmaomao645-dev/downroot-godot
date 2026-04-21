@@ -18,6 +18,7 @@ public sealed class GodotInputService(Func<NumericsVector2> pointerProvider, Fun
             Input.IsActionJustPressed("interact"),
             !pointerBlockedByUi && Input.IsMouseButtonPressed(MouseButton.Left),
             !pointerBlockedByUi && Input.IsMouseButtonPressed(MouseButton.Right),
+            Input.IsKeyPressed(Key.X),
             false,
             Input.IsActionJustPressed("toggle_craft_workspace"),
             Input.IsActionJustPressed("consume_selected"),
