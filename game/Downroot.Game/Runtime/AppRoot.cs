@@ -24,6 +24,7 @@ public partial class AppRoot : Control
     private CanvasLayer? _pageLayer;
     private Control? _pageHost;
     private bool _pauseMenuActive;
+    private bool _shutdownSaveCompleted;
     private Control? _currentPage;
 
     public override void _Ready()
@@ -405,6 +406,21 @@ public partial class AppRoot : Control
         GetTree().Quit();
     }
 
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+        if (what == NotificationWMCloseRequest)
+        {
+            SaveSessionOnShutdown();
+        }
+    }
+
+    public override void _ExitTree()
+    {
+        SaveSessionOnShutdown();
+        base._ExitTree();
+    }
+
     private void HandleSettingsBackRequested()
     {
         if (_pauseMenuActive)
@@ -448,5 +464,16 @@ public partial class AppRoot : Control
         }
 
         GD.Print($"[PauseInput] {message}");
+    }
+
+    private void SaveSessionOnShutdown()
+    {
+        if (_shutdownSaveCompleted)
+        {
+            return;
+        }
+
+        _shutdownSaveCompleted = true;
+        _session?.SaveCurrent();
     }
 }
