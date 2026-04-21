@@ -11,6 +11,8 @@ namespace Downroot.Gameplay.Runtime;
 
 public sealed class GameSimulation
 {
+    private const float HungerDrainIntervalSeconds = 36f;
+
     private const float AttackRange = 28f;
     private const int EmptyHandDamage = 1;
     private const float ThrowableHitRadius = 20f;
@@ -305,7 +307,7 @@ public sealed class GameSimulation
             _runtime.WorldState.TimeOfDaySeconds -= _runtime.BootstrapConfig.DayLengthSeconds;
         }
 
-        if (_runtime.WorldState.TotalElapsedSeconds % 3f < deltaSeconds)
+        if (_runtime.WorldState.TotalElapsedSeconds % HungerDrainIntervalSeconds < deltaSeconds)
         {
             _runtime.Player.Survival.DrainHunger(1);
             if (_runtime.Player.Survival.Hunger == 0)
