@@ -777,7 +777,7 @@ public sealed partial class WorldRenderer : Node2D
         }
 
         var targetZoomScalar = zoomOutHeld
-            ? BaseCameraZoom * TemporaryZoomOutFactor
+            ? BaseCameraZoom / TemporaryZoomOutFactor
             : BaseCameraZoom;
         var target = new Vector2(targetZoomScalar, targetZoomScalar);
         var weight = 1f - MathF.Exp(-CameraZoomLerpSpeed * (float)GetPhysicsProcessDeltaTime());
