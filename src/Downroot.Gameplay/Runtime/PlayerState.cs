@@ -21,4 +21,7 @@ public sealed class PlayerState
     public int SelectedHotbarIndex { get; set; }
     public InventoryState Inventory { get; }
     public SurvivalState Survival { get; }
+    public float PoisonRemainingSeconds { get; set; }
+    public int PoisonDamagePerSecond { get; set; }
+    public bool IsPoisoned => PoisonRemainingSeconds > 0;
 }

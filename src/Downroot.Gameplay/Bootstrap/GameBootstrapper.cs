@@ -141,6 +141,21 @@ public sealed class GameBootstrapper
                     generatedChunk.Coord,
                     true,
                     CreateNaturalEntityId(generatedChunk.WorldSpaceKind, generatedChunk.Coord, spawn.Tile, placeableDef.Id)));
+                continue;
+            }
+
+            if (runtime.Content.Items.TryGet(spawn.ContentId, out var itemDef))
+            {
+                chunk.AddNaturalEntity(new WorldEntityState(
+                    WorldEntityKind.ItemDrop,
+                    itemDef!.Id,
+                    runtime.GetWorldPosition(spawn.Tile),
+                    1,
+                    generatedChunk.WorldSpaceKind,
+                    generatedChunk.Coord,
+                    true,
+                    CreateNaturalEntityId(generatedChunk.WorldSpaceKind, generatedChunk.Coord, spawn.Tile, itemDef.Id),
+                    stackCount: 1));
             }
         }
 

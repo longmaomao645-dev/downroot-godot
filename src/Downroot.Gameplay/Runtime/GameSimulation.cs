@@ -279,10 +279,32 @@ public sealed class GameSimulation
 
         if (_runtime.WorldState.TotalElapsedSeconds % 3f < deltaSeconds)
         {
-            _runtime.Player.Survival.DrainHunger(1);
+            var hungerDrain = 1;
+
+            if (_runtime.Player.Survival.Hunger > _runtime.Player.Survival.MaxHunger * 0.3f)
+            {
+                _runtime.Player.Survival.Heal(1);
+                hungerDrain = 2;
+            }
+
+            _runtime.Player.Survival.DrainHunger(hungerDrain);
             if (_runtime.Player.Survival.Hunger == 0)
             {
                 DamagePlayer(1);
+            }
+        }
+
+        if (_runtime.Player.IsPoisoned)
+        {
+            _runtime.Player.PoisonRemainingSeconds -= deltaSeconds;
+            if (_runtime.Player.PoisonRemainingSeconds <= 0)
+            {
+                _runtime.Player.PoisonRemainingSeconds = 0;
+            }
+
+            if (_runtime.WorldState.TotalElapsedSeconds % 1f < deltaSeconds)
+            {
+                DamagePlayer(_runtime.Player.PoisonDamagePerSecond);
             }
         }
     }
@@ -341,6 +363,12 @@ public sealed class GameSimulation
         if (itemDef.HealthRestore > 0)
         {
             _runtime.Player.Survival.Heal(itemDef.HealthRestore);
+        }
+
+        if (itemDef.PoisonDuration > 0)
+        {
+            _runtime.Player.PoisonRemainingSeconds = itemDef.PoisonDuration;
+            _runtime.Player.PoisonDamagePerSecond = itemDef.PoisonDamagePerSecond;
         }
     }
 
