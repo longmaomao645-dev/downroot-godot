@@ -48,9 +48,9 @@ public sealed class GameSaveSnapshotBuilder
             _worldAdapter.Export(runtime.Overworld)
         };
 
-        if (runtime.DimShardPocket is not null)
+        foreach (var pocketWorld in runtime.PocketWorlds.Values)
         {
-            worlds.Add(_worldAdapter.Export(runtime.DimShardPocket));
+            worlds.Add(_worldAdapter.Export(pocketWorld));
         }
 
         return worlds;

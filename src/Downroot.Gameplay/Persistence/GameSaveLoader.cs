@@ -1,9 +1,12 @@
 using System.Numerics;
 using Downroot.Core.Save;
 using Downroot.Core.World;
+using Downroot.Gameplay.Bootstrap;
 using Downroot.Gameplay.Runtime;
 using Downroot.Gameplay.Runtime.Systems;
 using Downroot.Core.Ids;
+using Downroot.World.Generation;
+using Downroot.World.Models;
 
 namespace Downroot.Gameplay.Persistence;
 
@@ -38,7 +41,39 @@ public sealed class GameSaveLoader
         foreach (var savedWorld in save.Worlds)
         {
             var worldSpaceKind = Enum.Parse<WorldSpaceKind>(savedWorld.WorldSpaceKind, ignoreCase: true);
-            _worldAdapter.Import(runtime.GetWorld(worldSpaceKind), savedWorld);
+
+            if (worldSpaceKind == WorldSpaceKind.DimShardPocket)
+            {
+                // Recreate the pocket world from its stable world ID.
+                var worldId = savedWorld.StableWorldId;
+                var portalChunk = ParsePortalChunkFromWorldId(worldId);
+                var pocketSeed = GameBootstrapper.CreatePocketWorldSeed(save.WorldSeed, portalChunk);
+
+                var model = new WorldModel(
+                    worldId,
+                    WorldSpaceKind.DimShardPocket,
+                    pocketSeed,
+                    new ChunkCoord(-1, -1),
+                    new ChunkCoord(1, 1),
+                    portalChunk);
+
+                var pocketWorld = new LoadedWorldState(runtime.Content, model, runtime.BootstrapConfig.OverworldLoadRadius);
+                _worldAdapter.Import(pocketWorld, savedWorld);
+
+                runtime.PocketWorlds[worldId] = pocketWorld;
+                runtime.PocketGenerators[worldId] = GameBootstrapper.CreateGenerator(runtime.Content, WorldSpaceKind.DimShardPocket);
+                runtime.WorldState.PocketWorlds[worldId] = pocketWorld;
+
+                // Set the active pocket world ID if the saved state was in a pocket world.
+                if (worldSpaceKind == runtime.ActiveWorldSpaceKind)
+                {
+                    runtime.WorldState.ActivePocketWorldId = worldId;
+                }
+            }
+            else
+            {
+                _worldAdapter.Import(runtime.GetWorld(worldSpaceKind), savedWorld);
+            }
         }
 
         runtime.ActiveWorldSpaceKind = Enum.Parse<WorldSpaceKind>(save.ActiveWorldSpaceKind, ignoreCase: true);
@@ -57,9 +92,28 @@ public sealed class GameSaveLoader
             }
         }
 
-        runtime.WorldState.NotifyLightingStructureChanged();
-        runtime.WorldState.NotifyLightingValueChanged();
-        runtime.WorldState.MarkEntityProjectionDirty();
         runtime.WorldState.RefreshEntityProjection();
+    }
+
+    /// <summary>
+    /// Parses a ChunkCoord from a stable world ID of the format "dimshard:{seed}:{x},{y}".
+    /// </summary>
+    private static ChunkCoord ParsePortalChunkFromWorldId(string worldId)
+    {
+        var parts = worldId.Split(':');
+        if (parts.Length < 3)
+        {
+            return new ChunkCoord(0, 0);
+        }
+
+        var coords = parts[^1].Split(',');
+        if (coords.Length != 2
+            || !int.TryParse(coords[0], out var x)
+            || !int.TryParse(coords[1], out var y))
+        {
+            return new ChunkCoord(0, 0);
+        }
+
+        return new ChunkCoord(x, y);
     }
 }
