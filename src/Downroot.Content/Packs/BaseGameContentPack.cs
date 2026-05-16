@@ -183,8 +183,8 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterItem(new ItemDef(chestItemId, "Wooden Chest", PackId, "packs/basegame/assets/production/storage/wooden_chest.png", 32, 32, 8, chestPlaceableId));
         registrar.RegisterItem(new ItemDef(doorItemId, "Wooden Door", PackId, "packs/basegame/assets/structures/doors/wood_door_close_open.png", 32, 32, 8, doorPlaceableId));
         registrar.RegisterItem(new ItemDef(fenceItemId, "Wooden Fence", PackId, "packs/basegame/assets/structures/fences/wood_fence_horizontal.png", 32, 32, 32, fencePlaceableId));
-        registrar.RegisterItem(new ItemDef(mushroomItemId, "Mushroom", PackId, "packs/basegame/assets/world/nature/plants/brown_mushroom.png", 16, 16, 20, null, 15, 0, 1f, 0, 0, 0, 0f, 0));
-        registrar.RegisterItem(new ItemDef(poisonMushroomItemId, "Poison Mushroom", PackId, "packs/basegame/assets/world/nature/plants/poison_mushroom.png", 16, 16, 20, null, 10, 0, 1f, 0, 0, 0, 5f, 2));
+        registrar.RegisterItem(new ItemDef(mushroomItemId, "Mushroom", PackId, "packs/basegame/assets/world/nature/plants/brown_mushroom.png", 16, 16, 20, null, 15, 0, TreeBreakSpeedMultiplier: 1f, MeleeDamage: 0, IconAtlasColumn: 0, IconAtlasRow: 0, PoisonDuration: 0f, PoisonDamagePerSecond: 0));
+        registrar.RegisterItem(new ItemDef(poisonMushroomItemId, "Poison Mushroom", PackId, "packs/basegame/assets/world/nature/plants/poison_mushroom.png", 16, 16, 20, null, 10, 0, TreeBreakSpeedMultiplier: 1f, MeleeDamage: 0, IconAtlasColumn: 0, IconAtlasRow: 0, PoisonDuration: 5f, PoisonDamagePerSecond: 2));
         registrar.RegisterItem(new ItemDef(bedItemId, "Bed", PackId, "packs/basegame/assets/furniture/beds/bed.png", 32, 32, 4, bedPlaceableId));
         registrar.RegisterItem(new ItemDef(roofPanelItemId, "Roof Panel", PackId, "packs/basegame/assets/world/terrain/floors/stone_floor.png", 32, 32, 16, roofPanelPlaceableId));
         registrar.RegisterItem(new ItemDef(workbenchUpgradeItemId, "Weapons Bench Upgrade", PackId, "packs/basegame/assets/items/resources/upgrade_workbench_weapons_bench.png", 16, 16, 4));
