@@ -26,6 +26,13 @@
   - plants and flowers -> `world/nature/plants/` or `world/nature/flowers/`
   - rocks and ores -> `world/nature/rocks/` and `world/nature/ores/`
 
+## Rock Assets (`world/nature/rocks/`)
+- `stone.png` — 96×32 atlas (12×4 grid of 8×8 cells), contains 3 stone variants for `ResourceNodeDef`
+  - Variant 1 (small): columns 1–2 (~8×8)
+  - Variant 2 (medium): columns 4–7 (~16×16) — extracted as `rock_outcrop.png`
+  - Variant 3 (large): columns 8–11 (~24×24)
+- `rock_outcrop.png` — 32×32, extracted from `stone.png` variant 2, used by `rock_outcrop` resource node
+
 ## Raw Backups
 - Store original sheets in `raw/spritesheets/`.
 - Do not edit files in `raw/`; export derived assets elsewhere.

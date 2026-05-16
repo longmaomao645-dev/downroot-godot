@@ -11,14 +11,12 @@ namespace Downroot.Gameplay.Runtime;
 public sealed class GameRuntime(
     ContentRegistrySet content,
     WorldGenerator overworldGenerator,
-    WorldGenerator? dimShardGenerator,
     WorldState worldState,
     PlayerState player,
     GameBootstrapConfig bootstrapConfig)
 {
     public ContentRegistrySet Content { get; } = content;
     public WorldGenerator OverworldGenerator { get; } = overworldGenerator;
-    public WorldGenerator? DimShardGenerator { get; } = dimShardGenerator;
     public WorldState WorldState { get; } = worldState;
     public PlayerState Player { get; } = player;
     public GameBootstrapConfig BootstrapConfig { get; } = bootstrapConfig;
@@ -28,6 +26,9 @@ public sealed class GameRuntime(
     public int WorldSeed => StartOptions?.WorldSeed ?? BootstrapConfig.WorldSeed;
     public IReadOnlyList<string> EnabledPackIds => StartOptions?.EnabledPackIds ?? [];
 
+    public Dictionary<string, LoadedWorldState> PocketWorlds { get; } = new();
+    public Dictionary<string, WorldGenerator> PocketGenerators { get; } = new();
+
     public WorldSpaceKind ActiveWorldSpaceKind
     {
         get => WorldState.ActiveWorldSpaceKind;
@@ -35,7 +36,6 @@ public sealed class GameRuntime(
     }
 
     public LoadedWorldState Overworld => WorldState.Overworld;
-    public LoadedWorldState? DimShardPocket => WorldState.DimShardPocket;
     public int ChunkWidth => BootstrapConfig.ChunkWidth;
     public int ChunkHeight => BootstrapConfig.ChunkHeight;
     public EntityId? PrimaryBedEntityId
@@ -46,16 +46,37 @@ public sealed class GameRuntime(
 
     public LoadedWorldState GetWorld(WorldSpaceKind worldSpaceKind)
     {
-        return worldSpaceKind == WorldSpaceKind.Overworld
-            ? Overworld
-            : DimShardPocket ?? throw new InvalidOperationException("DimShardPocket is not available in this runtime.");
+        if (worldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            return Overworld;
+        }
+
+        // DimShardPocket: resolve via the active pocket world ID.
+        var activeId = WorldState.ActivePocketWorldId;
+        if (activeId is not null
+            && WorldState.PocketWorlds.TryGetValue(activeId, out var pocketWorld))
+        {
+            return pocketWorld;
+        }
+
+        throw new InvalidOperationException($"No active pocket world available for kind '{worldSpaceKind}'. Use GetPocketWorld(worldId) for specific pocket worlds.");
     }
+
+    public LoadedWorldState? GetPocketWorld(string worldId) => PocketWorlds.GetValueOrDefault(worldId);
+
+    public bool HasPocketWorld(string worldId) => PocketWorlds.ContainsKey(worldId);
 
     public WorldGenerator GetWorldGenerator(WorldSpaceKind worldSpaceKind)
     {
         return worldSpaceKind == WorldSpaceKind.Overworld
             ? OverworldGenerator
-            : DimShardGenerator ?? throw new InvalidOperationException("DimShardPocket generator is not available in this runtime.");
+            : throw new InvalidOperationException("Use GetPocketGenerator(worldId) for pocket world generators.");
+    }
+
+    public WorldGenerator GetPocketGenerator(string worldId)
+    {
+        return PocketGenerators.GetValueOrDefault(worldId)
+            ?? throw new InvalidOperationException($"Pocket world '{worldId}' generator not found.");
     }
 
     public WorldTileCoord GetWorldTile(Vector2 worldPosition)

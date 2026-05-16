@@ -14,9 +14,9 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
         get
         {
             yield return runtime.Overworld;
-            if (runtime.DimShardPocket is not null)
+            foreach (var pocketWorld in runtime.PocketWorlds.Values)
             {
-                yield return runtime.DimShardPocket;
+                yield return pocketWorld;
             }
         }
     }
@@ -29,9 +29,38 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
 
     public LoadedWorldState GetActiveWorld() => runtime.WorldState.GetActiveWorld();
 
-    public LoadedWorldState GetWorld(WorldSpaceKind worldSpaceKind) => runtime.GetWorld(worldSpaceKind);
+    public LoadedWorldState GetWorld(WorldSpaceKind worldSpaceKind)
+    {
+        if (worldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            return runtime.Overworld;
+        }
 
-    public WorldGenerator GetGenerator(WorldSpaceKind worldSpaceKind) => runtime.GetWorldGenerator(worldSpaceKind);
+        // DimShardPocket: resolve via the active pocket world ID.
+        var activeId = runtime.WorldState.ActivePocketWorldId;
+        if (activeId is not null
+            && runtime.WorldState.PocketWorlds.TryGetValue(activeId, out var pocketWorld))
+        {
+            return pocketWorld;
+        }
+
+        throw new InvalidOperationException($"No active pocket world available for kind '{worldSpaceKind}'.");
+    }
+
+    public WorldGenerator GetGenerator(WorldSpaceKind worldSpaceKind)
+    {
+        return runtime.GetWorldGenerator(worldSpaceKind);
+    }
+
+    public WorldGenerator GetGenerator(LoadedWorldState world)
+    {
+        if (world.WorldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            return runtime.OverworldGenerator;
+        }
+
+        return runtime.GetPocketGenerator(world.Model.StableId);
+    }
 
     public ChunkCoord GetChunkCoord(Vector2 worldPosition) => runtime.GetChunkCoord(worldPosition);
 
@@ -138,9 +167,29 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
 
     public PortalWorldLinkDef GetPortalLink(WorldSpaceKind worldSpaceKind, ChunkCoord portalChunk)
     {
-        return runtime.Content.PortalWorldLinks.First(link =>
-            (link.SourceWorldSpaceKind == worldSpaceKind && link.SourcePortalChunk == portalChunk)
-            || (link.TargetWorldSpaceKind == worldSpaceKind && link.TargetPortalChunk == portalChunk));
+        if (worldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            return new PortalWorldLinkDef(
+                WorldSpaceKind.Overworld,
+                WorldSpaceKind.DimShardPocket,
+                portalChunk,
+                new ChunkCoord(0, 0),
+                $"link:overworld-{portalChunk.X},{portalChunk.Y}");
+        }
+
+        // DimShardPocket portal — return to overworld at the source portal chunk.
+        // The source portal chunk is stored on the pocket world's model.
+        var pocketWorld = runtime.WorldState.PocketWorlds.Values
+            .FirstOrDefault(w => w.Model.SourcePortalChunk is not null
+                && w.LoadedChunks.ContainsKey(portalChunk));
+        var returnChunk = pocketWorld?.Model.SourcePortalChunk ?? new ChunkCoord(0, 0);
+
+        return new PortalWorldLinkDef(
+            WorldSpaceKind.DimShardPocket,
+            WorldSpaceKind.Overworld,
+            portalChunk,
+            returnChunk,
+            $"link:dimshard-{portalChunk.X},{portalChunk.Y}");
     }
 
     public bool IsPortalEntity(WorldEntityState entity)
@@ -152,10 +201,7 @@ public sealed class WorldRuntimeFacade(GameRuntime runtime)
 
         var portalDefId = GetPortalDefinitionId(entity.WorldSpaceKind);
         return portalDefId is not null
-            && entity.DefinitionId == portalDefId.Value
-            && runtime.Content.PortalWorldLinks.Any(link =>
-                (link.SourceWorldSpaceKind == entity.WorldSpaceKind && link.SourcePortalChunk == entity.ChunkCoord)
-                || (link.TargetWorldSpaceKind == entity.WorldSpaceKind && link.TargetPortalChunk == entity.ChunkCoord));
+            && entity.DefinitionId == portalDefId.Value;
     }
 
     public bool TryGetPlaceableDef(WorldEntityState entity, out PlaceableDef placeableDef)

@@ -29,7 +29,8 @@ public sealed class WorldState
     }
 
     public required LoadedWorldState Overworld { get; init; }
-    public LoadedWorldState? DimShardPocket { get; init; }
+    public Dictionary<string, LoadedWorldState> PocketWorlds { get; } = new();
+    public string? ActivePocketWorldId { get; set; }
     public WorldTravelState Travel { get; } = new();
     public float TimeOfDaySeconds { get; set; }
     public float TotalElapsedSeconds { get; set; }
@@ -53,9 +54,18 @@ public sealed class WorldState
 
     public LoadedWorldState GetActiveWorld()
     {
-        return ActiveWorldSpaceKind == WorldSpaceKind.Overworld
-            ? Overworld
-            : DimShardPocket ?? throw new InvalidOperationException("DimShardPocket is not loaded.");
+        if (ActiveWorldSpaceKind == WorldSpaceKind.Overworld)
+        {
+            return Overworld;
+        }
+
+        if (ActivePocketWorldId is not null
+            && PocketWorlds.TryGetValue(ActivePocketWorldId, out var pocketWorld))
+        {
+            return pocketWorld;
+        }
+
+        throw new InvalidOperationException($"No active pocket world. ActivePocketWorldId='{ActivePocketWorldId}'");
     }
 
     public void RefreshEntityProjection()
@@ -159,9 +169,9 @@ public sealed class WorldState
     private IEnumerable<LoadedWorldState> EnumerateWorlds()
     {
         yield return Overworld;
-        if (DimShardPocket is not null)
+        foreach (var pocketWorld in PocketWorlds.Values)
         {
-            yield return DimShardPocket;
+            yield return pocketWorld;
         }
     }
 }

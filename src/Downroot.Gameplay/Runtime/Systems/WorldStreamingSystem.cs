@@ -74,7 +74,7 @@ public sealed class WorldStreamingSystem(GameRuntime runtime, WorldRuntimeFacade
                     continue;
                 }
 
-                var generated = worldFacade.GetGenerator(world.WorldSpaceKind)
+                var generated = worldFacade.GetGenerator(world)
                     .GenerateChunk(world.WorldSpaceKind, world.WorldSeed, coord, runtime.ChunkWidth, runtime.ChunkHeight);
                 world.LoadChunk(generated, chunk => GameBootstrapper.CreateChunkRuntimeState(runtime, chunk));
                 changed = true;

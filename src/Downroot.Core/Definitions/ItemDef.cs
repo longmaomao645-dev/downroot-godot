@@ -16,4 +16,10 @@ public sealed record ItemDef(
     ItemUseBehaviorKind UseBehavior = ItemUseBehaviorKind.None,
     HarvestToolDef? HarvestTool = null,
     MeleeWeaponDef? MeleeWeapon = null,
-    ThrowableWeaponDef? ThrowableWeapon = null) : ContentDef(Id, DisplayName, SourcePackId);
+    ThrowableWeaponDef? ThrowableWeapon = null,
+    float TreeBreakSpeedMultiplier = 1f,
+    int MeleeDamage = 0,
+    int IconAtlasColumn = 0,
+    int IconAtlasRow = 0,
+    float PoisonDuration = 0f,
+    int PoisonDamagePerSecond = 0) : ContentDef(Id, DisplayName, SourcePackId);

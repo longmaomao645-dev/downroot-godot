@@ -414,7 +414,8 @@ public sealed class LoadedWorldState
                         continue;
                     }
 
-                    if (Vector2.DistanceSquared(blocker.Position, position) < blockingRadiusSquared)
+                    var blockerCenter = GetCollisionCenter(blocker);
+                    if (Vector2.DistanceSquared(blockerCenter, position) < blockingRadiusSquared)
                     {
                         return true;
                     }
@@ -518,9 +519,10 @@ public sealed class LoadedWorldState
             return;
         }
 
+        var collisionCenter = GetCollisionCenter(entity);
         var tile = new WorldTileCoord(
-            (int)MathF.Floor(entity.Position.X / 32f),
-            (int)MathF.Floor(entity.Position.Y / 32f));
+            (int)MathF.Floor(collisionCenter.X / 32f),
+            (int)MathF.Floor(collisionCenter.Y / 32f));
         if (!_blockingEntitiesByTile.TryGetValue(tile, out var blockers))
         {
             blockers = [];
@@ -549,6 +551,32 @@ public sealed class LoadedWorldState
         }
 
         BlockerVersion++;
+    }
+
+    private Vector2 GetCollisionCenter(WorldEntityState entity)
+    {
+        return entity.Kind switch
+        {
+            WorldEntityKind.ResourceNode => GetResourceCollisionCenter(entity),
+            WorldEntityKind.Placeable => GetPlaceableCollisionCenter(entity),
+            _ => entity.Position
+        };
+    }
+
+    private Vector2 GetResourceCollisionCenter(WorldEntityState entity)
+    {
+        var def = _content.ResourceNodes.Get(entity.DefinitionId);
+        return new Vector2(
+            entity.Position.X + def.SpriteWidth * 0.5f,
+            entity.Position.Y + def.SpriteHeight * 0.5f);
+    }
+
+    private Vector2 GetPlaceableCollisionCenter(WorldEntityState entity)
+    {
+        var def = _content.Placeables.Get(entity.DefinitionId);
+        return new Vector2(
+            entity.Position.X + def.SpriteWidth * 0.5f,
+            entity.Position.Y + def.SpriteHeight * 0.5f);
     }
 
     private bool ShouldIndexAsBlocker(WorldEntityState entity)

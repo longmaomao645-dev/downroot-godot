@@ -15,7 +15,7 @@ public static class WorldGenPassFactory
             WorldGenPassTypes.River => new RiverPass(definition.TargetId),
             WorldGenPassTypes.RaisedOreField => new RaisedOreFieldPass(definition.TargetId, new RaisedOreFieldRuleResolver(registries)),
             WorldGenPassTypes.RockOutcrop => new RockOutcropPass(definition.TargetId),
-            WorldGenPassTypes.PortalSite => new PortalSitePass(definition.TargetId, registries.PortalWorldLinks.ToArray()),
+            WorldGenPassTypes.PortalSite => new PortalSitePass(definition.TargetId, definition.SpawnChance, definition.RequiredChunkCoord, definition.MinChunkSpacing),
             WorldGenPassTypes.DirtPatch => new DirtPatchPass(definition.TargetId),
             WorldGenPassTypes.ScatterSpawn => new ScatterSpawnPass(
                 definition.TargetId,

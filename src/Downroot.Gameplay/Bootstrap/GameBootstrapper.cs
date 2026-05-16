@@ -38,24 +38,13 @@ public sealed class GameBootstrapper
         var bootstrapConfig = registries.BootstrapConfig
             ?? throw new InvalidOperationException("No bootstrap config was registered by any content pack.");
         bootstrapConfig = bootstrapConfig with { WorldSeed = request.StartOptions.WorldSeed };
-        var portalLink = GetDimShardPortalLink(registries);
 
         var overworldModel = new WorldModel("overworld", WorldSpaceKind.Overworld, bootstrapConfig.WorldSeed);
-        var dimShardModel = portalLink is null
-            ? null
-            : new WorldModel(
-                CreatePocketWorldId(bootstrapConfig.WorldSeed, portalLink.SourcePortalChunk),
-                WorldSpaceKind.DimShardPocket,
-                CreatePocketWorldSeed(bootstrapConfig.WorldSeed, portalLink.SourcePortalChunk),
-                new ChunkCoord(-1, -1),
-                new ChunkCoord(1, 1),
-                portalLink.SourcePortalChunk);
 
         var worldState = new WorldState
         {
             ActiveWorldSpaceKind = WorldSpaceKind.Overworld,
-            Overworld = new LoadedWorldState(registries, overworldModel, bootstrapConfig.OverworldLoadRadius),
-            DimShardPocket = dimShardModel is null ? null : new LoadedWorldState(registries, dimShardModel, bootstrapConfig.OverworldLoadRadius)
+            Overworld = new LoadedWorldState(registries, overworldModel, bootstrapConfig.OverworldLoadRadius)
         };
 
         var player = new PlayerState(
@@ -75,14 +64,12 @@ public sealed class GameBootstrapper
         var runtime = new GameRuntime(
             registries,
             CreateGenerator(registries, WorldSpaceKind.Overworld),
-            portalLink is null ? null : CreateGenerator(registries, WorldSpaceKind.DimShardPocket),
             worldState,
             player,
             bootstrapConfig)
         {
             StartOptions = request.StartOptions
         };
-        ValidatePocketWorld(runtime, portalLink);
 
         var spawnChunk = bootstrapConfig.PlayerSpawn.Tile.ToChunkCoord(runtime.ChunkWidth, runtime.ChunkHeight);
         LoadInitialChunks(runtime, runtime.Overworld, spawnChunk);
@@ -169,6 +156,21 @@ public sealed class GameBootstrapper
                 {
                     PlaceableState = PlaceableRuntimeStateFactory.Create(runtime, placeableDef)
                 });
+                continue;
+            }
+
+            if (runtime.Content.Items.TryGet(spawn.ContentId, out var itemDef))
+            {
+                chunk.AddNaturalEntity(new WorldEntityState(
+                    WorldEntityKind.ItemDrop,
+                    itemDef!.Id,
+                    runtime.GetWorldPosition(spawn.Tile),
+                    1,
+                    generatedChunk.WorldSpaceKind,
+                    generatedChunk.Coord,
+                    true,
+                    CreateNaturalEntityId(generatedChunk.WorldSpaceKind, generatedChunk.Coord, spawn.Tile, itemDef.Id),
+                    stackCount: 1));
             }
         }
 
@@ -197,7 +199,7 @@ public sealed class GameBootstrapper
         return $"dimshard:{overworldSeed}:{portalChunk.X},{portalChunk.Y}";
     }
 
-    private static WorldGenerator CreateGenerator(ContentRegistrySet registries, WorldSpaceKind worldSpaceKind)
+    internal static WorldGenerator CreateGenerator(ContentRegistrySet registries, WorldSpaceKind worldSpaceKind)
     {
         return new WorldGenerator(
             registries,
@@ -250,73 +252,5 @@ public sealed class GameBootstrapper
         Console.WriteLine($"[WorldGen] loaded {world.WorldSpaceKind} chunks => {chunkSummary}");
     }
 
-    private static PortalWorldLinkDef? GetDimShardPortalLink(ContentRegistrySet registries)
-    {
-        var links = registries.PortalWorldLinks.Where(link =>
-            link.SourceWorldSpaceKind == WorldSpaceKind.Overworld
-            && link.TargetWorldSpaceKind == WorldSpaceKind.DimShardPocket).ToArray();
 
-        if (links.Length > 1)
-        {
-            throw new InvalidOperationException("Only one DimShardPocket portal link is supported in the current runtime.");
-        }
-
-        return links.SingleOrDefault();
-    }
-
-    private static void ValidatePocketWorld(GameRuntime runtime, PortalWorldLinkDef? portalLink)
-    {
-        if (portalLink is null)
-        {
-            if (runtime.DimShardPocket is not null)
-            {
-                throw new InvalidOperationException("DimShardPocket runtime must not be created when no portal link is registered.");
-            }
-
-            return;
-        }
-
-        if (runtime.DimShardPocket is null)
-        {
-            throw new InvalidOperationException("DimShardPocket runtime must exist when a portal link is registered.");
-        }
-
-        var dimShardPocket = runtime.DimShardPocket;
-        if (!ReferenceEquals(dimShardPocket.Model, runtime.WorldState.DimShardPocket!.Model))
-        {
-            throw new InvalidOperationException("DimShardPocket must have its own world model.");
-        }
-
-        if (ReferenceEquals(runtime.Overworld.Model, dimShardPocket.Model))
-        {
-            throw new InvalidOperationException("DimShardPocket cannot share WorldModel with Overworld.");
-        }
-
-        if (ReferenceEquals(runtime.Overworld, dimShardPocket))
-        {
-            throw new InvalidOperationException("DimShardPocket must use its own LoadedWorldState.");
-        }
-
-        if (dimShardPocket.WorldSpaceKind != WorldSpaceKind.DimShardPocket)
-        {
-            throw new InvalidOperationException("Pocket world must be tagged as DimShardPocket.");
-        }
-
-        if (portalLink.SourcePortalChunk != dimShardPocket.Model.SourcePortalChunk)
-        {
-            throw new InvalidOperationException("Pocket world source portal chunk must match the registered portal link.");
-        }
-
-        var expectedStableId = CreatePocketWorldId(runtime.BootstrapConfig.WorldSeed, portalLink.SourcePortalChunk);
-        if (!string.Equals(dimShardPocket.Model.StableId, expectedStableId, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Pocket world stable id does not match the required format.");
-        }
-
-        var expectedSeed = CreatePocketWorldSeed(runtime.BootstrapConfig.WorldSeed, portalLink.SourcePortalChunk);
-        if (dimShardPocket.WorldSeed != expectedSeed || dimShardPocket.WorldSeed == runtime.Overworld.WorldSeed)
-        {
-            throw new InvalidOperationException("Pocket world seed must be independently derived from the overworld seed and portal chunk.");
-        }
-    }
 }

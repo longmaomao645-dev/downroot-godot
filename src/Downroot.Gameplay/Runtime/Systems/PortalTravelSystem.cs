@@ -2,6 +2,8 @@ using System.Numerics;
 using Downroot.Core.Ids;
 using Downroot.Core.World;
 using Downroot.Gameplay.Bootstrap;
+using Downroot.World.Generation;
+using Downroot.World.Models;
 
 namespace Downroot.Gameplay.Runtime.Systems;
 
@@ -52,16 +54,35 @@ public sealed class PortalTravelSystem(
             ? link.SourcePortalChunk
             : link.TargetPortalChunk;
 
-        if (targetWorld == WorldSpaceKind.DimShardPocket
-            && runtime.DimShardPocket is not null
-            && !runtime.DimShardPocket.LoadedChunks.ContainsKey(targetPortalChunk))
+        if (targetWorld == WorldSpaceKind.DimShardPocket)
         {
-            worldStreamingSystem.UpdateLoadedChunksForWorld(
-                runtime.DimShardPocket,
-                WorldTileCoord.FromChunkAndLocal(targetPortalChunk, new LocalTileCoord(0, 0), runtime.ChunkWidth, runtime.ChunkHeight));
+            var worldId = GameBootstrapper.CreatePocketWorldId(runtime.WorldSeed, entity.ChunkCoord);
+
+            // Lazy creation: first visit creates the pocket world.
+            if (!runtime.HasPocketWorld(worldId))
+            {
+                CreatePocketWorld(worldId, entity.ChunkCoord);
+            }
+
+            var pocketWorld = runtime.GetPocketWorld(worldId)!;
+
+            // Ensure the target portal chunk is loaded in the pocket world.
+            if (!pocketWorld.LoadedChunks.ContainsKey(targetPortalChunk))
+            {
+                worldStreamingSystem.UpdateLoadedChunksForWorld(
+                    pocketWorld,
+                    WorldTileCoord.FromChunkAndLocal(targetPortalChunk, new LocalTileCoord(0, 0), runtime.ChunkWidth, runtime.ChunkHeight));
+            }
+
+            runtime.WorldState.ActivePocketWorldId = worldId;
+        }
+        else
+        {
+            runtime.WorldState.ActivePocketWorldId = null;
         }
 
-        var targetTile = FindPortalTile(worldFacade.GetWorld(targetWorld), targetPortalChunk);
+        var targetWorldState = GetTargetWorldState(targetWorld);
+        var targetTile = FindPortalTile(targetWorldState, targetPortalChunk);
         runtime.WorldState.Travel.SourceWorldSpaceKind = runtime.ActiveWorldSpaceKind;
         runtime.WorldState.Travel.TargetWorldSpaceKind = targetWorld;
         runtime.WorldState.Travel.SourcePortalChunk = entity.ChunkCoord;
@@ -76,42 +97,67 @@ public sealed class PortalTravelSystem(
             1.25f);
     }
 
+    private LoadedWorldState GetTargetWorldState(WorldSpaceKind targetWorld)
+    {
+        if (targetWorld == WorldSpaceKind.Overworld)
+        {
+            return runtime.Overworld;
+        }
+
+        var activeId = runtime.WorldState.ActivePocketWorldId;
+        if (activeId is not null && runtime.PocketWorlds.TryGetValue(activeId, out var pocketWorld))
+        {
+            return pocketWorld;
+        }
+
+        throw new InvalidOperationException("No active pocket world for DimShardPocket travel.");
+    }
+
     private void PerformWorldSwitch()
     {
-        if (runtime.WorldState.Travel.TargetWorldSpaceKind == runtime.WorldState.Travel.SourceWorldSpaceKind)
+        var travel = runtime.WorldState.Travel;
+        if (travel.TargetWorldSpaceKind == travel.SourceWorldSpaceKind)
         {
             throw new InvalidOperationException("Portal travel must switch to a different world space.");
         }
 
-        runtime.ActiveWorldSpaceKind = runtime.WorldState.Travel.TargetWorldSpaceKind;
-        var activeWorld = worldFacade.GetActiveWorld();
-        if (runtime.ActiveWorldSpaceKind == WorldSpaceKind.DimShardPocket)
+        runtime.ActiveWorldSpaceKind = travel.TargetWorldSpaceKind;
+        if (travel.TargetWorldSpaceKind == WorldSpaceKind.Overworld)
         {
-            if (runtime.DimShardPocket is null)
-            {
-                throw new InvalidOperationException("DimShardPocket travel requires the portal mod runtime.");
-            }
-
-            if (ReferenceEquals(activeWorld, runtime.Overworld)
-                || activeWorld.Model.WorldSpaceKind != WorldSpaceKind.DimShardPocket
-                || activeWorld.Model.StableId == "overworld"
-                || activeWorld.WorldSeed == runtime.Overworld.WorldSeed)
-            {
-                throw new InvalidOperationException("DimShardPocket travel must activate the independent pocket world container.");
-            }
+            runtime.WorldState.ActivePocketWorldId = null;
         }
 
+        var activeWorld = worldFacade.GetActiveWorld();
         runtime.WorldState.WorkspaceMode = CraftWorkspaceMode.Hidden;
         runtime.WorldState.ActiveStationEntityId = null;
         runtime.WorldState.ActiveStationKind = null;
-        worldStreamingSystem.UpdateLoadedChunksForWorld(activeWorld, runtime.WorldState.Travel.TargetPortalTile);
-        runtime.Player.Position = FindPortalLandingPosition(activeWorld, runtime.WorldState.Travel.TargetPortalTile);
+        worldStreamingSystem.UpdateLoadedChunksForWorld(activeWorld, travel.TargetPortalTile);
+        runtime.Player.Position = FindPortalLandingPosition(activeWorld, travel.TargetPortalTile);
         worldFacade.EnsureEntityProjectionCurrent();
         runtime.WorldState.SetStatusEvent(
             runtime.ActiveWorldSpaceKind == WorldSpaceKind.Overworld
                 ? new StatusEventState(StatusEventKind.ReturnedThroughPortal)
                 : new StatusEventState(StatusEventKind.EnteredPortal),
             1.5f);
+    }
+
+    private void CreatePocketWorld(string worldId, ChunkCoord portalChunk)
+    {
+        var pocketSeed = GameBootstrapper.CreatePocketWorldSeed(runtime.WorldSeed, portalChunk);
+        var model = new WorldModel(
+            worldId,
+            WorldSpaceKind.DimShardPocket,
+            pocketSeed,
+            new ChunkCoord(-1, -1),
+            new ChunkCoord(1, 1),
+            portalChunk);
+
+        var world = new LoadedWorldState(runtime.Content, model, runtime.BootstrapConfig.OverworldLoadRadius);
+        var generator = GameBootstrapper.CreateGenerator(runtime.Content, WorldSpaceKind.DimShardPocket);
+
+        runtime.PocketWorlds[worldId] = world;
+        runtime.PocketGenerators[worldId] = generator;
+        runtime.WorldState.PocketWorlds[worldId] = world;
     }
 
     private Vector2 FindPortalLandingPosition(LoadedWorldState world, WorldTileCoord portalTile)
@@ -146,7 +192,7 @@ public sealed class PortalTravelSystem(
     {
         if (!world.LoadedChunks.ContainsKey(preferredChunk))
         {
-            var generated = worldFacade.GetGenerator(world.WorldSpaceKind)
+            var generated = worldFacade.GetGenerator(world)
                 .GenerateChunk(world.WorldSpaceKind, world.WorldSeed, preferredChunk, runtime.ChunkWidth, runtime.ChunkHeight);
             world.LoadChunk(generated, chunk => GameBootstrapper.CreateChunkRuntimeState(runtime, chunk));
         }

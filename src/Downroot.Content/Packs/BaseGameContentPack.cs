@@ -52,6 +52,8 @@ public sealed class BaseGameContentPack : IContentPack
         var chestItemId = new ContentId("basegame:wooden_chest_item");
         var doorItemId = new ContentId("basegame:wooden_door_item");
         var fenceItemId = new ContentId("basegame:wooden_fence_item");
+        var mushroomItemId = new ContentId("basegame:mushroom");
+        var poisonMushroomItemId = new ContentId("basegame:poison_mushroom");
         var bedItemId = new ContentId("basegame:bed_item");
         var roofPanelItemId = new ContentId("basegame:roof_panel_item");
         var workbenchUpgradeItemId = new ContentId("basegame:upgrade_workbench_weapons_bench");
@@ -181,6 +183,8 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterItem(new ItemDef(chestItemId, "Wooden Chest", PackId, "packs/basegame/assets/production/storage/wooden_chest.png", 32, 32, 8, chestPlaceableId));
         registrar.RegisterItem(new ItemDef(doorItemId, "Wooden Door", PackId, "packs/basegame/assets/structures/doors/wood_door_close_open.png", 32, 32, 8, doorPlaceableId));
         registrar.RegisterItem(new ItemDef(fenceItemId, "Wooden Fence", PackId, "packs/basegame/assets/structures/fences/wood_fence_horizontal.png", 32, 32, 32, fencePlaceableId));
+        registrar.RegisterItem(new ItemDef(mushroomItemId, "Mushroom", PackId, "packs/basegame/assets/world/nature/plants/brown_mushroom.png", 16, 16, 20, null, 15, 0, 1f, 0, 0, 0, 0f, 0));
+        registrar.RegisterItem(new ItemDef(poisonMushroomItemId, "Poison Mushroom", PackId, "packs/basegame/assets/world/nature/plants/poison_mushroom.png", 16, 16, 20, null, 10, 0, 1f, 0, 0, 0, 5f, 2));
         registrar.RegisterItem(new ItemDef(bedItemId, "Bed", PackId, "packs/basegame/assets/furniture/beds/bed.png", 32, 32, 4, bedPlaceableId));
         registrar.RegisterItem(new ItemDef(roofPanelItemId, "Roof Panel", PackId, "packs/basegame/assets/world/terrain/floors/stone_floor.png", 32, 32, 16, roofPanelPlaceableId));
         registrar.RegisterItem(new ItemDef(workbenchUpgradeItemId, "Weapons Bench Upgrade", PackId, "packs/basegame/assets/items/resources/upgrade_workbench_weapons_bench.png", 16, 16, 4));
@@ -220,6 +224,8 @@ public sealed class BaseGameContentPack : IContentPack
         registrar.RegisterRecipe(new RecipeDef(new ContentId("basegame:smelt_silicon_wafer"), "Silicon Wafer", PackId, [new ItemAmount(sandItemId, 8)], new ItemAmount(siliconWaferItemId, 1), CraftingStationKind.Furnace, CraftDurationSeconds: 5f));
 
         RegisterOverworldPasses(registrar, dirtId, grassId, riverWaterId, rockOutcropNodeId, treeNodeId, blueberryNodeId, stoneNodeId, voiditeRaisedId, goldveinRaisedId, venomiteRaisedId, wormId, cockroachId);
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-mushrooms"), WorldGenPassTypes.ScatterSpawn, mushroomItemId, WorldSpaceKind.Overworld, 6, 0, 0, 28, 18, SurfaceRegions.GrassField, 2));
+        registrar.RegisterWorldGenPass(new WorldGenPassDef(new ContentId("basegame:spawn-poison-mushrooms"), WorldGenPassTypes.ScatterSpawn, poisonMushroomItemId, WorldSpaceKind.Overworld, 3, 0, 0, 28, 18, SurfaceRegions.GrassField, 3));
 
         registrar.SetBootstrapConfig(new GameBootstrapConfig(
             ChunkWidth: 28,
@@ -231,7 +237,7 @@ public sealed class BaseGameContentPack : IContentPack
             DebugItemId: stoneItemId,
             DebugPlaceableId: workbenchPlaceableId,
             DebugTerrainVariantId: grassId,
-            DayLengthSeconds: 90,
+            DayLengthSeconds: 1440,
             StartingHealth: 100,
             StartingHunger: 100,
             MaxHealth: 100,
