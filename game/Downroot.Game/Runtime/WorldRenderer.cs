@@ -1030,7 +1030,7 @@ public sealed partial class WorldRenderer : Node2D
         var east = HasMatchingConnectedNeighbor(entity, new WorldTileCoord(tile.X + 1, tile.Y));
         var south = HasMatchingConnectedNeighbor(entity, new WorldTileCoord(tile.X, tile.Y + 1));
         var west = HasMatchingConnectedNeighbor(entity, new WorldTileCoord(tile.X - 1, tile.Y));
-        var variant = ResolveConnectedPlaceableVariant(north, east, south, west);
+        var variant = ResolveConnectedPlaceableVariant(placeableDef, north, east, south, west);
         return ResolveCachedTexture(
             $"placeable-connected:{placeableDef.Id.Value}:{variant}:{isOpen}",
             () => _textureLoader.LoadTexture($"{placeableDef.Id.Value}:{variant}", $"{System.IO.Path.GetDirectoryName(placeableDef.SpritePath)!.Replace('\\', '/')}/{variant}.png").Texture);
@@ -1057,7 +1057,90 @@ public sealed partial class WorldRenderer : Node2D
         return false;
     }
 
-    private static string ResolveConnectedPlaceableVariant(bool north, bool east, bool south, bool west)
+    private static string ResolveConnectedPlaceableVariant(PlaceableDef placeableDef, bool north, bool east, bool south, bool west)
+    {
+        return placeableDef.Id.Value == "basegame:stone_wall"
+            ? ResolveConnectedStoneWallVariant(north, east, south, west)
+            : ResolveConnectedFenceVariant(north, east, south, west);
+    }
+
+    private static string ResolveConnectedStoneWallVariant(bool north, bool east, bool south, bool west)
+    {
+        var connections = (north ? 1 : 0) + (east ? 1 : 0) + (south ? 1 : 0) + (west ? 1 : 0);
+        if (connections <= 0)
+        {
+            return "stone_wall_single";
+        }
+
+        if (north && east && south && west)
+        {
+            return "stone_wall_center";
+        }
+
+        if (north && east && south && !west)
+        {
+            return "stone_wall_right";
+        }
+
+        if (!north && east && south && west)
+        {
+            return "stone_wall_bottom";
+        }
+
+        if (north && !east && south && west)
+        {
+            return "stone_wall_left";
+        }
+
+        if (north && east && !south && west)
+        {
+            return "stone_wall_top";
+        }
+
+        if (north && east && !south && !west)
+        {
+            return "stone_wall_corner_ne";
+        }
+
+        if (!north && east && south && !west)
+        {
+            return "stone_wall_corner_es";
+        }
+
+        if (!north && !east && south && west)
+        {
+            return "stone_wall_corner_sw";
+        }
+
+        if (north && !east && !south && west)
+        {
+            return "stone_wall_corner_wn";
+        }
+
+        if ((east || west) && !(north || south))
+        {
+            return "stone_wall_horizontal";
+        }
+
+        if ((north || south) && !(east || west))
+        {
+            return "stone_wall_vertical";
+        }
+
+        if (east && west)
+        {
+            return "stone_wall_horizontal";
+        }
+
+        if (north && south)
+        {
+            return "stone_wall_vertical";
+        }
+
+        return "stone_wall_center";
+    }
+
+    private static string ResolveConnectedFenceVariant(bool north, bool east, bool south, bool west)
     {
         var connections = (north ? 1 : 0) + (east ? 1 : 0) + (south ? 1 : 0) + (west ? 1 : 0);
         if (connections <= 0)
